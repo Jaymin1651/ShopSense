@@ -6,6 +6,8 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
+from session import resolve_user
+
 API_URL = os.getenv('API_URL', 'http://localhost:8000').rstrip('/')
 st.set_page_config(page_title='ShopSense • Marketplace Intelligence', page_icon='🛍️', layout='wide')
 st.markdown('''<style>
@@ -43,13 +45,15 @@ def currency(value):
     return f'${float(value):,.2f}'  # Demo currency only; no currency conversion.
 
 
+# Recover an interrupted sign-in instead of reading a missing session key.
+user = resolve_user(st.session_state, lambda: api('GET', '/api/auth/me'))
+
 with st.sidebar:
     st.title('🛍️ ShopSense')
     st.caption('Multi-Vendor Marketplace Intelligence')
-    if st.session_state.get('token'):
-        user = st.session_state.get('user', {})
-        st.success(f"{user.get('role','').title()} · {user.get('email','')}")
-        if st.button('Sign out', use_container_width=True):
+    if user:
+        st.success(f"{user['role'].title()} · {user['email']}")
+        if st.button('Sign out', width='stretch'):
             for k in ['token', 'user', 'cart']:
                 st.session_state.pop(k, None)
             st.rerun()
@@ -57,7 +61,7 @@ with st.sidebar:
     st.caption('Demonstration app. Orders do not process real payments.')
 
 
-if not st.session_state.get('token'):
+if not user:
     st.title('Grow your marketplace with actionable analytics')
     st.write('Manage vendors, list products, place simulated orders, and monitor revenue and demand.')
     t1, t2, t3 = st.tabs(['Sign in', 'Register as vendor', 'Register as customer'])
@@ -68,7 +72,7 @@ if not st.session_state.get('token'):
             submitted = st.form_submit_button('Sign in', type='primary')
         if submitted:
             token = api('POST', '/api/auth/login', json={'email': email, 'password': password})
-            if token:
+            if token and token.get('access_token'):
                 st.session_state['token'] = token['access_token']
                 me = api('GET', '/api/auth/me')
                 if me:
@@ -99,7 +103,6 @@ if not st.session_state.get('token'):
             st.success('Customer account created. Please sign in.')
     st.stop()
 
-user = st.session_state['user']
 role = user['role']
 st.title('ShopSense dashboard' if role == 'admin' else 'My shop' if role == 'vendor' else 'ShopSense marketplace')
 st.caption('Products, orders, stock and sales in one place')
@@ -122,11 +125,11 @@ if role in ('admin', 'vendor'):
             st.subheader('Revenue trend')
             if trends:
                 df = pd.DataFrame(trends)
-                st.plotly_chart(px.area(df, x='date', y='gmv', labels={'date':'Date','gmv':'GMV'}), use_container_width=True)
+                st.plotly_chart(px.area(df, x='date', y='gmv', labels={'date':'Date','gmv':'GMV'}), width='stretch')
         with right:
             st.subheader('Best-selling products')
             if top:
-                st.plotly_chart(px.bar(pd.DataFrame(top), x='gmv', y='product', orientation='h'), use_container_width=True)
+                st.plotly_chart(px.bar(pd.DataFrame(top), x='gmv', y='product', orientation='h'), width='stretch')
             else:
                 st.info('Sales charts appear after customers place orders.')
     with tabs[1]:
@@ -134,7 +137,7 @@ if role in ('admin', 'vendor'):
             st.subheader('Vendor approvals and lifecycle')
             vendors = api('GET', '/api/vendors')
             if vendors:
-                st.dataframe(pd.DataFrame(vendors)[['id', 'business_name', 'owner_name', 'email', 'category', 'status']], hide_index=True, use_container_width=True)
+                st.dataframe(pd.DataFrame(vendors)[['id', 'business_name', 'owner_name', 'email', 'category', 'status']], hide_index=True, width='stretch')
                 vendor_id = st.selectbox('Vendor to manage', [v['id'] for v in vendors], format_func=lambda v: next(x['business_name'] for x in vendors if x['id']==v))
                 action = st.selectbox('New status', ['approved', 'suspended', 'rejected'])
                 if st.button('Update vendor status', type='primary'):
@@ -151,7 +154,7 @@ if role in ('admin', 'vendor'):
                     st.warning(f"Shop status: {vendor['status']}. Products will only be visible to customers after approval.")
             products = api('GET', '/api/products/mine')
             if products:
-                st.dataframe(pd.DataFrame(products)[['id','name','category','price','quantity','visible_to_customers','visibility_note']], hide_index=True, use_container_width=True)
+                st.dataframe(pd.DataFrame(products)[['id','name','category','price','quantity','visible_to_customers','visibility_note']], hide_index=True, width='stretch')
                 st.caption('Customer visibility depends on shop approval and whether a product is active. Out-of-stock products are displayed but cannot be ordered.')
                 st.subheader('Show or hide a product')
                 visibility_id = st.selectbox('Choose product', [p['id'] for p in products],
@@ -187,7 +190,7 @@ if role in ('admin', 'vendor'):
         orders = api('GET', '/api/orders')
         if orders:
             df = pd.DataFrame(orders)
-            st.dataframe(df[['id','created_at','status','total','items']], use_container_width=True, hide_index=True)
+            st.dataframe(df[['id','created_at','status','total','items']], width='stretch', hide_index=True)
         else:
             st.info('No orders yet.')
     with tabs[3]:
@@ -204,13 +207,13 @@ if role in ('admin', 'vendor'):
                 st.line_chart(pd.DataFrame(forecast['forecast']).set_index('date')['predicted_units'])
         st.subheader('Customer segments')
         if segments:
-            st.dataframe(pd.DataFrame(segments['segments']), hide_index=True, use_container_width=True)
+            st.dataframe(pd.DataFrame(segments['segments']), hide_index=True, width='stretch')
             st.caption('Transparent rule-based recency/frequency segmentation (not clustering).')
         if role == 'admin':
             st.subheader('Vendor comparison')
             ranking = api('GET', '/api/analytics/vendors')
             if ranking:
-                st.dataframe(pd.DataFrame(ranking), hide_index=True, use_container_width=True)
+                st.dataframe(pd.DataFrame(ranking), hide_index=True, width='stretch')
     with tabs[4]:
         st.subheader('Export sales records')
         csv_content = api('GET', '/api/analytics/sales.csv')
@@ -254,7 +257,7 @@ elif role == 'customer':
     with orders_tab:
         orders = api('GET','/api/orders')
         if orders:
-            st.dataframe(pd.DataFrame(orders)[['id','created_at','status','total','items']], hide_index=True, use_container_width=True)
+            st.dataframe(pd.DataFrame(orders)[['id','created_at','status','total','items']], hide_index=True, width='stretch')
         else:
             st.info('You have not placed an order.')
     with recommended:
