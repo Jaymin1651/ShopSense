@@ -1,0 +1,39 @@
+name: Historical Olist Dataset
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'dashboard/historical_data.py'
+      - 'scripts/analyze_olist.py'
+      - '.github/workflows/historical-data.yml'
+permissions:
+  contents: read
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dataset analysis requirements
+        run: pip install 'pandas>=2.2,<3' 'requests>=2.32,<3'
+      - name: Download original Olist CSVs and build analytics
+        run: python -m scripts.analyze_olist --download
+      - name: Assert genuine dataset size
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          audit = json.loads(Path('data/processed/audit.json').read_text())
+          assert audit['source_item_rows'] > 100_000, audit
+          assert audit['analyzed_item_rows'] > 90_000, audit
+          print('Olist historical dataset verified:', audit['analyzed_item_rows'], 'delivered item rows')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: olist-historical-analytics
+          path: data/processed/
+          retention-days: 7
