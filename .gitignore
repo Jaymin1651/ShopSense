@@ -13,3 +13,8 @@ venv/
 htmlcov/
 .DS_Store
 .streamlit/secrets.toml
+
+# Original third-party CSV files and generated historical extracts
+data/olist/
+data/raw/
+data/processed/
