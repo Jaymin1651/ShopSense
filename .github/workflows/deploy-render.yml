@@ -1,0 +1,30 @@
+name: Deploy after passing CI
+on:
+  workflow_run:
+    workflows: ["Python CI"]
+    types: [completed]
+    branches: [main]
+permissions: {}
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger API deployment (when configured)
+        env:
+          HOOK_URL: ${{ secrets.RENDER_API_DEPLOY_HOOK }}
+        run: |
+          if [ -n "$HOOK_URL" ]; then
+            curl --fail --silent --show-error --max-time 30 --request POST "$HOOK_URL"
+          else
+            echo 'Skipping API deployment: secret not configured.'
+          fi
+      - name: Trigger dashboard deployment (when configured)
+        env:
+          HOOK_URL: ${{ secrets.RENDER_DASHBOARD_DEPLOY_HOOK }}
+        run: |
+          if [ -n "$HOOK_URL" ]; then
+            curl --fail --silent --show-error --max-time 30 --request POST "$HOOK_URL"
+          else
+            echo 'Skipping dashboard deployment: secret not configured.'
+          fi

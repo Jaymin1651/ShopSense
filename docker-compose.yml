@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: shopsense
+      POSTGRES_USER: shopsense
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local_only_password}
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - shopsense_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U shopsense -d shopsense']
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    environment:
+      DATABASE_URL: postgresql+psycopg://shopsense:${POSTGRES_PASSWORD:-local_only_password}@db:5432/shopsense
+      JWT_SECRET: ${JWT_SECRET:-dev-only-change-me-use-longer-key-here}
+      ENVIRONMENT: development
+      CORS_ORIGINS: http://localhost:8501
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@shopsense.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-this-before-sharing}
+    ports:
+      - '127.0.0.1:8000:8000'
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'python', '-c', 'import urllib.request;urllib.request.urlopen("http://localhost:8000/ready", timeout=5)']
+      interval: 10s
+      retries: 10
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    environment:
+      API_URL: http://api:8000
+    ports:
+      - '127.0.0.1:8501:8501'
+    depends_on:
+      api:
+        condition: service_healthy
+volumes:
+  shopsense_db:
