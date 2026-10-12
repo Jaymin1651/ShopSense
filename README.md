@@ -161,3 +161,18 @@ Active products from approved shops are shown even when stock is zero, but the A
 - **16 Oct:** Final demo, README cleanup and submission.
 
 This is an educational MVP with explainable rules. I am keeping the ML forecast as a baseline rather than presenting it as a trained model. See [Roadmap](docs/ROADMAP.md) for stretch goals.
+
+## Historical real-data analytics (Olist)
+
+ShopSense now includes a **separate historical analytics page** powered by the Brazilian E-Commerce Public Dataset by Olist (about 100k anonymized orders from 2016–2018). Open **Historical Analytics** in the Streamlit sidebar to see actual seller/product performance, monthly delivered-item sales, category comparisons, state filters, and CSV ranking exports. The first launch downloads five original CSVs from a public mirror; it may take a little time.
+
+Historical prices are denominated in **Brazilian reais (R$)**; `item sales value` sums delivered-item `price` and is **not profit, payments or net revenue**. Olist's anonymous seller IDs are **not** users registered in the 2026 live marketplace. The historical page never modifies the marketplace PostgreSQL tables.
+
+To reproduce the analysis locally after installing `requirements-dashboard.txt`:
+
+```bash
+python -m scripts.analyze_olist --download
+pytest -q tests/test_historical_data.py
+```
+
+**Source, data dictionary, quality checks, alternate official Kaggle download, license CC BY-NC-SA 4.0 and metric definitions:** [Olist dataset methodology](docs/OLIST_DATASET.md).
