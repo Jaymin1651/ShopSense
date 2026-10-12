@@ -1,0 +1,6 @@
+# Streamlit Community Cloud uses this file for dashboard/dashboard.py.
+# Keep this list aligned with requirements-dashboard.txt.
+streamlit>=1.41,<2
+requests>=2.32,<3
+pandas>=2.2,<3
+plotly>=5.24,<7
