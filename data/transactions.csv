@@ -1,0 +1,6 @@
+transaction_id,vendor_id,product_id,quantity,amount
+1,1,101,3,1200
+2,1,102,1,500
+3,2,103,2,850
+4,2,104,5,2500
+5,3,105,2,700

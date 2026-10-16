@@ -1,28 +1,18 @@
-"""ShopSense REST API; schema is managed with Alembic migrations."""
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
-from sqlalchemy.orm import Session
-from fastapi import Depends
-from app.config import settings
-from app.database import get_db
-from app.routers import auth, vendors, products, orders, behavior, analytics
+from app.routes.vendor_routes import router as vendor_router
+from app.routes.product_routes import router as product_router
+from app.routes.analytics_routes import router as analytics_router
 
-app = FastAPI(title='ShopSense Marketplace & Analytics API', version='0.1.0',
-              description='Multi-vendor marketplace, inventory, sales analytics and baseline demand forecast.')
-app.add_middleware(CORSMiddleware, allow_origins=list(settings.cors_origins),
-                   allow_credentials=True, allow_methods=['GET', 'POST', 'PATCH', 'PUT'],
-                   allow_headers=['Authorization', 'Content-Type'])
-for router in (auth.router, vendors.router, products.router, orders.router, behavior.router, analytics.router):
-    app.include_router(router)
+app = FastAPI(
+    title="ShopSense API",
+    description="Vendor management, product management, and sales analytics",
+    version="1.0.0"
+)
 
+app.include_router(vendor_router)
+app.include_router(product_router)
+app.include_router(analytics_router)
 
-@app.get('/health', tags=['System'])
-def health():
-    return {'status': 'ok', 'environment': settings.environment}
-
-
-@app.get('/ready', tags=['System'])
-def ready(db: Session = Depends(get_db)):
-    db.execute(text('SELECT 1'))
-    return {'status': 'ready'}
+@app.get("/")
+def home():
+    return {"message": "Welcome to ShopSense API"}
