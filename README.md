@@ -69,6 +69,10 @@ pytest -q
 
 **Not yet included:** payment gateway, returns/refunds, real supplier/warehouse feeds, privacy consent workflows, production rate-limiting, trained inventory forecasting, collaborative filtering, clustering, churn prediction, full ETL/scheduling, MLflow integration. These are later milestones; don't describe them as completed.
 
+## Project documentation and mentor guide
+
+For the complete implementation audit of Steps 1–20, file/folder explanations, database and dataset design, run commands, demo walkthrough, mentor speaking script, likely viva questions, and outstanding evaluation gaps, see [**Project Documentation & Mentor Guide**](docs/PROJECT_GUIDE.md).
+
 ## Folder structure
 
 ```text
