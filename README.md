@@ -71,7 +71,10 @@ pytest -q
 
 ## Project documentation and mentor guide
 
-For the complete implementation audit of Steps 1–20, file/folder explanations, database and dataset design, run commands, demo walkthrough, mentor speaking script, likely viva questions, and outstanding evaluation gaps, see [**Project Documentation & Mentor Guide**](docs/PROJECT_GUIDE.md).
+- **[End-to-End Mentor Implementation Guide](docs/MENTOR_IMPLEMENTATION_GUIDE.md)** — code walkthrough for vendor management, live analytics, Olist historical analytics, API examples, test coverage, and a timed demo script.
+- [Project Documentation & Mentor Guide](docs/PROJECT_GUIDE.md) — Steps 1–20 audit, repository/file guide, database design, implementation gaps, and viva preparation.
+- [Olist Dataset Methodology](docs/OLIST_DATASET.md) — dataset provenance, licensing, joins, metric definitions, and reproducibility.
+- [Deployment Guide](docs/DEPLOYMENT.md) — local setup, Render environment configuration, smoke tests, and rollback.
 
 ## Folder structure
 
