@@ -34,7 +34,8 @@ def low_stock_alert(inventory: pd.DataFrame, demand: pd.DataFrame | None = None,
                         | (frame['days_of_cover'].notna() & (frame['days_of_cover'] < frame['lead_time_days']))].copy()
     runs_out = flagged['days_of_cover'].notna() & (flagged['days_of_cover'] < flagged['lead_time_days'])
     flagged['severity'] = np.where((flagged['current_stock'] <= 0) | runs_out, 'critical', 'warning')
-    flagged['message'] = flagged.apply(_message, axis=1)
+        # apply() on an empty frame returns a DataFrame, so build the column from a list.
+    flagged['message'] = [_message(row) for _, row in flagged.iterrows()]
     order = {'critical': 0, 'warning': 1}
     flagged['_rank'] = flagged['severity'].map(order)
     flagged = flagged.sort_values(['_rank', 'days_of_cover', 'current_stock'], na_position='last')
