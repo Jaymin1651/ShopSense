@@ -7,10 +7,12 @@ from app.database import Base, get_db
 from app.main import app
 from app.models import User
 from app.security import hash_password
+from app.services import intelligence
 
 
 @pytest.fixture()
 def client():
+    intelligence.clear_cache()  # trained models are cached per process; tests use fresh databases
     engine = create_engine('sqlite://', connect_args={'check_same_thread': False}, poolclass=StaticPool)
     Base.metadata.create_all(bind=engine)
     session_factory = sessionmaker(bind=engine, expire_on_commit=False)

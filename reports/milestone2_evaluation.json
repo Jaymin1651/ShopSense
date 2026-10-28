@@ -1,0 +1,507 @@
+{
+  "generated_at": "2026-10-28 14:57 UTC",
+  "targets": {
+    "forecast_accuracy_pct": 80.0,
+    "silhouette": 0.85,
+    "relevance_pct": 75.0
+  },
+  "synthetic": {
+    "dataset": "synthetic (data/*.csv, seed 42)",
+    "transactions": 34545,
+    "customers": 1362,
+    "products": 58,
+    "forecasting": {
+      "product": {
+        "series": 58,
+        "train_weeks": 91,
+        "holdout_weeks": 12,
+        "holdout_start": "2026-07-12",
+        "horizon": "1 week ahead (walk-forward)",
+        "methods": {
+          "random_forest": {
+            "accuracy_pct": 68.73,
+            "wape_pct": 31.27,
+            "mae": 2.859,
+            "rmse": 3.748,
+            "bias_pct": 3.35,
+            "actual_units": 6365.0
+          },
+          "naive": {
+            "accuracy_pct": 60.16,
+            "wape_pct": 39.84,
+            "mae": 3.644,
+            "rmse": 4.705,
+            "bias_pct": -2.48,
+            "actual_units": 6365.0
+          },
+          "seasonal_naive": {
+            "accuracy_pct": 53.7,
+            "wape_pct": 46.3,
+            "mae": 4.234,
+            "rmse": 5.807,
+            "bias_pct": -31.0,
+            "actual_units": 6365.0
+          },
+          "moving_average_4": {
+            "accuracy_pct": 68.82,
+            "wape_pct": 31.18,
+            "mae": 2.852,
+            "rmse": 3.798,
+            "bias_pct": -3.77,
+            "actual_units": 6365.0
+          }
+        },
+        "model_accuracy_pct": 68.73,
+        "best_baseline": "moving_average_4",
+        "beats_best_baseline": false
+      },
+      "category": {
+        "series": 9,
+        "train_weeks": 91,
+        "holdout_weeks": 12,
+        "holdout_start": "2026-07-12",
+        "horizon": "1 week ahead (walk-forward)",
+        "methods": {
+          "random_forest": {
+            "accuracy_pct": 84.19,
+            "wape_pct": 15.81,
+            "mae": 9.318,
+            "rmse": 12.07,
+            "bias_pct": 1.85,
+            "actual_units": 6365.0
+          },
+          "naive": {
+            "accuracy_pct": 80.05,
+            "wape_pct": 19.95,
+            "mae": 11.759,
+            "rmse": 14.681,
+            "bias_pct": -2.48,
+            "actual_units": 6365.0
+          },
+          "seasonal_naive": {
+            "accuracy_pct": 65.89,
+            "wape_pct": 34.11,
+            "mae": 20.102,
+            "rmse": 23.961,
+            "bias_pct": -31.0,
+            "actual_units": 6365.0
+          },
+          "moving_average_4": {
+            "accuracy_pct": 82.93,
+            "wape_pct": 17.07,
+            "mae": 10.058,
+            "rmse": 12.345,
+            "bias_pct": -3.77,
+            "actual_units": 6365.0
+          }
+        },
+        "model_accuracy_pct": 84.19,
+        "best_baseline": "moving_average_4",
+        "beats_best_baseline": true
+      },
+      "parent_category": {
+        "series": 4,
+        "train_weeks": 91,
+        "holdout_weeks": 12,
+        "holdout_start": "2026-07-12",
+        "horizon": "1 week ahead (walk-forward)",
+        "methods": {
+          "random_forest": {
+            "accuracy_pct": 89.56,
+            "wape_pct": 10.44,
+            "mae": 13.846,
+            "rmse": 17.719,
+            "bias_pct": 0.48,
+            "actual_units": 6365.0
+          },
+          "naive": {
+            "accuracy_pct": 86.99,
+            "wape_pct": 13.01,
+            "mae": 17.25,
+            "rmse": 21.377,
+            "bias_pct": -2.48,
+            "actual_units": 6365.0
+          },
+          "seasonal_naive": {
+            "accuracy_pct": 68.56,
+            "wape_pct": 31.44,
+            "mae": 41.688,
+            "rmse": 46.787,
+            "bias_pct": -31.0,
+            "actual_units": 6365.0
+          },
+          "moving_average_4": {
+            "accuracy_pct": 89.19,
+            "wape_pct": 10.81,
+            "mae": 14.339,
+            "rmse": 17.885,
+            "bias_pct": -3.77,
+            "actual_units": 6365.0
+          }
+        },
+        "model_accuracy_pct": 89.56,
+        "best_baseline": "moving_average_4",
+        "beats_best_baseline": true
+      },
+      "store_total": {
+        "series": 1,
+        "train_weeks": 91,
+        "holdout_weeks": 12,
+        "holdout_start": "2026-07-12",
+        "horizon": "1 week ahead (walk-forward)",
+        "methods": {
+          "random_forest": {
+            "accuracy_pct": 94.97,
+            "wape_pct": 5.03,
+            "mae": 26.679,
+            "rmse": 31.861,
+            "bias_pct": -1.0,
+            "actual_units": 6365.0
+          },
+          "naive": {
+            "accuracy_pct": 93.34,
+            "wape_pct": 6.66,
+            "mae": 35.333,
+            "rmse": 41.253,
+            "bias_pct": -2.48,
+            "actual_units": 6365.0
+          },
+          "seasonal_naive": {
+            "accuracy_pct": 69.0,
+            "wape_pct": 31.0,
+            "mae": 164.417,
+            "rmse": 173.56,
+            "bias_pct": -31.0,
+            "actual_units": 6365.0
+          },
+          "moving_average_4": {
+            "accuracy_pct": 93.99,
+            "wape_pct": 6.01,
+            "mae": 31.854,
+            "rmse": 44.01,
+            "bias_pct": -3.77,
+            "actual_units": 6365.0
+          }
+        },
+        "model_accuracy_pct": 94.97,
+        "best_baseline": "moving_average_4",
+        "beats_best_baseline": true
+      }
+    },
+    "segmentation": {
+      "k3": {
+        "k": 3,
+        "metrics": {
+          "silhouette": 0.3387,
+          "davies_bouldin": 1.0517,
+          "calinski_harabasz": 1287.5,
+          "stability_ari": 0.8756,
+          "silhouette_by_k": {
+            "2": 0.4563,
+            "3": 0.3387,
+            "4": 0.3226,
+            "5": 0.3371,
+            "6": 0.323
+          },
+          "persona_recovery_ari": 0.3042
+        },
+        "profiles": [
+          {
+            "segment": "High value",
+            "customers": 319,
+            "avg_orders": 36.9,
+            "avg_spent": 12683.0,
+            "avg_recency_days": 15.4,
+            "avg_order_value": 356.8,
+            "share_pct": 23.4,
+            "description": "Frequent, high-spending and recently active."
+          },
+          {
+            "segment": "Regular",
+            "customers": 431,
+            "avg_orders": 8.2,
+            "avg_spent": 1670.0,
+            "avg_recency_days": 42.5,
+            "avg_order_value": 260.8,
+            "share_pct": 31.6,
+            "description": "Repeat buyers with moderate spend."
+          },
+          {
+            "segment": "Dormant",
+            "customers": 612,
+            "avg_orders": 3.4,
+            "avg_spent": 676.7,
+            "avg_recency_days": 327.1,
+            "avg_order_value": 203.5,
+            "share_pct": 44.9,
+            "description": "Long time since the last order."
+          }
+        ]
+      },
+      "auto_k": {
+        "k": 2,
+        "metrics": {
+          "silhouette": 0.4563,
+          "davies_bouldin": 0.8275,
+          "calinski_harabasz": 1631.2,
+          "stability_ari": 0.9692,
+          "silhouette_by_k": {
+            "2": 0.4563,
+            "3": 0.3387,
+            "4": 0.3226,
+            "5": 0.3371,
+            "6": 0.323
+          },
+          "persona_recovery_ari": 0.3795
+        },
+        "profiles": [
+          {
+            "segment": "High value",
+            "customers": 539,
+            "avg_orders": 26.4,
+            "avg_spent": 8379.8,
+            "avg_recency_days": 21.8,
+            "avg_order_value": 309.2,
+            "share_pct": 39.6,
+            "description": "Frequent, high-spending and recently active."
+          },
+          {
+            "segment": "Low engagement",
+            "customers": 823,
+            "avg_orders": 3.9,
+            "avg_spent": 805.7,
+            "avg_recency_days": 257.2,
+            "avg_order_value": 223.7,
+            "share_pct": 60.4,
+            "description": "Few orders, low spend or long inactive."
+          }
+        ]
+      }
+    },
+    "recommendation": {
+      "k5": {
+        "k": 5,
+        "cutoff": "2026-08-01",
+        "test_customers": 519,
+        "catalogue_size": 58,
+        "relevance_definition": "HitRate@5: share of customers whose top 5 contains a product they newly bought after the cutoff",
+        "models": {
+          "hybrid": {
+            "hit_rate_at_5_pct": 59.73,
+            "precision_at_5_pct": 15.3,
+            "recall_at_5_pct": 43.96,
+            "ndcg_at_5": 0.3348,
+            "catalogue_coverage_pct": 100.0
+          },
+          "popularity_baseline": {
+            "hit_rate_at_5_pct": 34.87,
+            "precision_at_5_pct": 7.78,
+            "recall_at_5_pct": 21.77,
+            "ndcg_at_5": 0.1506,
+            "catalogue_coverage_pct": 53.4
+          }
+        },
+        "relevance_pct": 59.73,
+        "beats_baseline": true
+      },
+      "k10": {
+        "k": 10,
+        "cutoff": "2026-08-01",
+        "test_customers": 519,
+        "catalogue_size": 58,
+        "relevance_definition": "HitRate@10: share of customers whose top 10 contains a product they newly bought after the cutoff",
+        "models": {
+          "hybrid": {
+            "hit_rate_at_10_pct": 75.14,
+            "precision_at_10_pct": 10.67,
+            "recall_at_10_pct": 60.4,
+            "ndcg_at_10": 0.3967,
+            "catalogue_coverage_pct": 100.0
+          },
+          "popularity_baseline": {
+            "hit_rate_at_10_pct": 51.25,
+            "precision_at_10_pct": 6.49,
+            "recall_at_10_pct": 37.02,
+            "ndcg_at_10": 0.2059,
+            "catalogue_coverage_pct": 74.1
+          }
+        },
+        "relevance_pct": 75.14,
+        "beats_baseline": true
+      }
+    }
+  },
+  "olist": {
+    "dataset": "Olist Brazilian E-Commerce (real, anonymised), delivered orders 2017-01 to 2018-08",
+    "item_rows": 109748,
+    "customers": 92994,
+    "forecasting": {
+      "top20_categories": {
+        "series": 20,
+        "train_weeks": 73,
+        "holdout_weeks": 12,
+        "holdout_start": "2018-06-10",
+        "horizon": "1 week ahead (walk-forward)",
+        "methods": {
+          "random_forest": {
+            "accuracy_pct": 75.49,
+            "wape_pct": 24.51,
+            "mae": 17.71,
+            "rmse": 24.35,
+            "bias_pct": -1.06,
+            "actual_units": 17340.0
+          },
+          "naive": {
+            "accuracy_pct": 73.24,
+            "wape_pct": 26.76,
+            "mae": 19.337,
+            "rmse": 27.187,
+            "bias_pct": 0.41,
+            "actual_units": 17340.0
+          },
+          "seasonal_naive": {
+            "accuracy_pct": 49.48,
+            "wape_pct": 50.52,
+            "mae": 36.504,
+            "rmse": 51.211,
+            "bias_pct": -40.71,
+            "actual_units": 17340.0
+          },
+          "moving_average_4": {
+            "accuracy_pct": 72.58,
+            "wape_pct": 27.42,
+            "mae": 19.812,
+            "rmse": 27.412,
+            "bias_pct": -3.21,
+            "actual_units": 17340.0
+          }
+        },
+        "model_accuracy_pct": 75.49,
+        "best_baseline": "naive",
+        "beats_best_baseline": true
+      },
+      "store_total": {
+        "series": 1,
+        "train_weeks": 73,
+        "holdout_weeks": 12,
+        "holdout_start": "2018-06-10",
+        "horizon": "1 week ahead (walk-forward)",
+        "methods": {
+          "random_forest": {
+            "accuracy_pct": 81.12,
+            "wape_pct": 18.88,
+            "mae": 320.984,
+            "rmse": 382.248,
+            "bias_pct": 15.47,
+            "actual_units": 20401.0
+          },
+          "naive": {
+            "accuracy_pct": 83.46,
+            "wape_pct": 16.54,
+            "mae": 281.167,
+            "rmse": 391.265,
+            "bias_pct": 0.17,
+            "actual_units": 20401.0
+          },
+          "seasonal_naive": {
+            "accuracy_pct": 56.62,
+            "wape_pct": 43.38,
+            "mae": 737.5,
+            "rmse": 814.899,
+            "bias_pct": -43.38,
+            "actual_units": 20401.0
+          },
+          "moving_average_4": {
+            "accuracy_pct": 79.39,
+            "wape_pct": 20.61,
+            "mae": 350.312,
+            "rmse": 441.011,
+            "bias_pct": -3.54,
+            "actual_units": 20401.0
+          }
+        },
+        "model_accuracy_pct": 81.12,
+        "best_baseline": "naive",
+        "beats_best_baseline": false
+      }
+    },
+    "segmentation": {
+      "k": 3,
+      "metrics": {
+        "silhouette": 0.4285,
+        "davies_bouldin": 0.8308,
+        "calinski_harabasz": 53891.3,
+        "stability_ari": 0.8288,
+        "silhouette_by_k": {
+          "2": 0.7144,
+          "3": 0.4285,
+          "4": 0.3914,
+          "5": 0.3568,
+          "6": 0.3546
+        }
+      },
+      "profiles": [
+        {
+          "segment": "High value",
+          "customers": 2785,
+          "avg_orders": 2.1,
+          "avg_spent": 260.2,
+          "avg_recency_days": 217.4,
+          "avg_order_value": 123.0,
+          "share_pct": 3.0,
+          "description": "Frequent, high-spending and recently active."
+        },
+        {
+          "segment": "Regular",
+          "customers": 18592,
+          "avg_orders": 1.0,
+          "avg_spent": 139.8,
+          "avg_recency_days": 44.9,
+          "avg_order_value": 139.8,
+          "share_pct": 20.0,
+          "description": "Repeat buyers with moderate spend."
+        },
+        {
+          "segment": "Dormant",
+          "customers": 71617,
+          "avg_orders": 1.0,
+          "avg_spent": 137.5,
+          "avg_recency_days": 284.4,
+          "avg_order_value": 137.5,
+          "share_pct": 77.0,
+          "description": "Long time since the last order."
+        }
+      ]
+    },
+    "recommendation": {
+      "evaluated": false,
+      "reason": "Only 3.0% of Olist customers ever order twice, so there is almost no per-customer history to recommend from or to hold out."
+    }
+  },
+  "scorecard": [
+    {
+      "criterion": "Inventory forecasting accuracy",
+      "target": ">= 80%",
+      "metric": "1 - WAPE, weekly, 12-week holdout, category level",
+      "value": 84.19,
+      "met": true,
+      "context": "Store total 94.97%, single products 68.73% (4-week moving average: 68.82%). Individual products sell a few units a week, so week-to-week noise caps product-level accuracy. Real Olist data: top-20 categories 75.49%, store total 81.12%."
+    },
+    {
+      "criterion": "Customer segmentation quality",
+      "target": ">= 0.85",
+      "metric": "Silhouette score, K-Means k=3 on log RFM",
+      "value": 0.3387,
+      "met": false,
+      "context": "Bootstrap stability (adjusted Rand) 0.8756, best silhouette over k=2..6 0.4563. Real purchase behaviour is a continuum, so silhouette values of 0.3-0.5 are typical; 0.85 needs almost perfectly separated groups. Real Olist customers: silhouette 0.4285."
+    },
+    {
+      "criterion": "Recommendation relevance",
+      "target": ">= 75%",
+      "metric": "HitRate@10 on purchases in the final 60 days",
+      "value": 75.14,
+      "met": true,
+      "context": "Popularity baseline 51.25%. Precision@10 10.67%, Recall@10 60.4%. The catalogue has 58 products, so 10 picks cover a large share of it."
+    }
+  ]
+}

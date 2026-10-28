@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 from app.database import get_db
-from app.models import Product, Vendor, Inventory, InventoryMovement, User
+from app.models import Product, Vendor, Inventory, InventoryMovement, User, Warehouse
 from app.schemas import ProductIn, ProductUpdate, ProductOut, InventorySet, InventoryOut
 from app.security import require_roles
 
@@ -26,7 +26,8 @@ def serialize_product(product: Product, vendor_status: str = 'approved') -> Prod
         description=product.description, category=product.category, price=product.price,
         is_active=product.is_active, quantity=product.inventory.quantity,
         low_stock_threshold=product.inventory.low_stock_threshold,
-        visible_to_customers=visible, visibility_note=note,
+        visible_to_customers=visible, visibility_note=note, unit_cost=product.unit_cost,
+        warehouse_id=product.inventory.warehouse_id, lead_time_days=product.inventory.lead_time_days or 7,
     )
 
 
@@ -54,9 +55,12 @@ def add_product(payload: ProductIn, db: Session = Depends(get_db), user: User = 
     vendor = db.get(Vendor, user.vendor_id)
     if not vendor or vendor.status != 'approved':
         raise HTTPException(403, 'Vendor approval required before listing products')
+    if payload.warehouse_id is not None and not db.get(Warehouse, payload.warehouse_id):
+        raise HTTPException(404, 'Warehouse not found')
     product = Product(vendor_id=user.vendor_id, name=payload.name, description=payload.description,
-                      category=payload.category, price=payload.price)
-    product.inventory = Inventory(quantity=payload.quantity, low_stock_threshold=payload.low_stock_threshold)
+                      category=payload.category, price=payload.price, unit_cost=payload.unit_cost)
+    product.inventory = Inventory(quantity=payload.quantity, low_stock_threshold=payload.low_stock_threshold,
+                                  warehouse_id=payload.warehouse_id, lead_time_days=payload.lead_time_days)
     db.add(product)
     db.flush()
     if payload.quantity:
@@ -94,12 +98,19 @@ def update_inventory(product_id: int, payload: InventorySet, db: Session = Depen
         raise HTTPException(403, 'Cannot modify another vendor\'s inventory')
     if user.role == 'vendor' and db.get(Vendor, user.vendor_id).status != 'approved':
         raise HTTPException(403, 'Vendor account is not approved')
+    if payload.warehouse_id is not None and not db.get(Warehouse, payload.warehouse_id):
+        raise HTTPException(404, 'Warehouse not found')
     inv = db.scalar(select(Inventory).where(Inventory.product_id == product_id).with_for_update())
     diff = payload.quantity - inv.quantity
     inv.quantity = payload.quantity
     if payload.low_stock_threshold is not None:
         inv.low_stock_threshold = payload.low_stock_threshold
+    if payload.warehouse_id is not None:
+        inv.warehouse_id = payload.warehouse_id
+    if payload.lead_time_days is not None:
+        inv.lead_time_days = payload.lead_time_days
     if diff:
         db.add(InventoryMovement(product_id=product_id, delta=diff, reason='manual_adjustment'))
     db.commit()
-    return InventoryOut(product_id=product_id, quantity=inv.quantity, low_stock_threshold=inv.low_stock_threshold)
+    return InventoryOut(product_id=product_id, quantity=inv.quantity, low_stock_threshold=inv.low_stock_threshold,
+                        warehouse_id=inv.warehouse_id, lead_time_days=inv.lead_time_days)

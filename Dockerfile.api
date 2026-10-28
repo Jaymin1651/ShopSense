@@ -7,5 +7,8 @@ COPY app ./app
 COPY scripts ./scripts
 COPY alembic ./alembic
 COPY alembic.ini ./alembic.ini
+# Synthetic Milestone 2 dataset (for scripts.seed_milestone2) and the latest evaluation report
+COPY data ./data
+COPY reports ./reports
 EXPOSE 8000
 CMD ["sh", "-c", "alembic upgrade head && if [ -n \"${ADMIN_EMAIL:-}\" ] && [ -n \"${ADMIN_PASSWORD:-}\" ]; then python -m scripts.bootstrap_admin || exit 1; fi && exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

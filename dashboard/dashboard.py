@@ -1,56 +1,21 @@
 """ShopSense interactive Streamlit demo dashboard using the REST API."""
-import os
 from decimal import Decimal
-import requests
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 
 from session import resolve_user
+from ui import TEAL, VIOLET, api, apply_style, currency, nav, note
 
-API_URL = os.getenv('API_URL', 'http://localhost:8000').rstrip('/')
 st.set_page_config(page_title='ShopSense • Marketplace Intelligence', page_icon='🛍️', layout='wide')
-st.markdown('''<style>
-  .block-container {padding-top:2rem; max-width:1250px;}
-  [data-testid="stMetric"] {background:rgba(126,126,126,.08);padding:15px;border-radius:12px;}
-  h1, h2, h3 {letter-spacing:-.025em;}
-</style>''', unsafe_allow_html=True)
-
-
-def api(method, path, **kwargs):
-    token = st.session_state.get('token')
-    headers = {'Authorization': f'Bearer {token}'} if token else {}
-    try:
-        r = requests.request(method, f'{API_URL}{path}', headers=headers, timeout=15, **kwargs)
-        if r.status_code >= 400:
-            try:
-                detail = r.json().get('detail', r.text)
-                if isinstance(detail, list):
-                    detail = '; '.join(str(d.get('msg', d)) for d in detail)
-            except ValueError:
-                detail = r.text
-            st.error(f'{r.status_code}: {detail}')
-            return None
-        if r.headers.get('content-type', '').startswith('text/csv'):
-            return r.text
-        if r.headers.get('content-type', '').startswith('application/pdf'):
-            return r.content
-        return r.json()
-    except requests.RequestException as exc:
-        st.error(f'API unavailable ({API_URL}): {exc}')
-        return None
-
-
-def currency(value):
-    return f'${float(value):,.2f}'  # Demo currency only; no currency conversion.
+apply_style()
 
 
 # Recover an interrupted sign-in instead of reading a missing session key.
 user = resolve_user(st.session_state, lambda: api('GET', '/api/auth/me'))
 
+nav(user)
 with st.sidebar:
-    st.title('🛍️ ShopSense')
-    st.caption('Multi-Vendor Marketplace Intelligence')
     if user:
         st.success(f"{user['role'].title()} · {user['email']}")
         if st.button('Sign out', width='stretch'):
@@ -117,6 +82,12 @@ if role in ('admin', 'vendor'):
                                      [currency(summary['gmv']), summary['orders'], currency(summary['average_order_value']), summary['low_stock_products']]):
             col.metric(label, value)
         st.caption('GMV is calculated from placed order items. It is not collected payment, profit, or net revenue.')
+    alerts = api('GET', '/api/inventory/alerts') or []
+    critical = [a for a in alerts if a['severity'] == 'critical']
+    if critical:
+        names = ', '.join(a['name'] for a in critical[:3]) + (f' and {len(critical) - 3} more' if len(critical) > 3 else '')
+        st.warning(f'{len(critical)} product{"s" if len(critical) != 1 else ""} will run out before restock: {names}.')
+        st.page_link('pages/2_Inventory_Intelligence.py', label='Open the reorder plan')
 
     tabs = st.tabs(['Overview', 'Vendors' if role == 'admin' else 'My products', 'Order history', 'Demand insights', 'Reports'])
     with tabs[0]:
@@ -125,11 +96,16 @@ if role in ('admin', 'vendor'):
             st.subheader('Revenue trend')
             if trends:
                 df = pd.DataFrame(trends)
-                st.plotly_chart(px.area(df, x='date', y='gmv', labels={'date':'Date','gmv':'GMV'}), width='stretch')
+                fig = px.area(df, x='date', y='gmv', labels={'date': 'Date', 'gmv': 'GMV'})
+                fig.update_traces(line_color=TEAL, fillcolor='rgba(14,124,123,0.10)')
+                st.plotly_chart(fig, width='stretch', config={'displayModeBar': False})
         with right:
             st.subheader('Best-selling products')
             if top:
-                st.plotly_chart(px.bar(pd.DataFrame(top), x='gmv', y='product', orientation='h'), width='stretch')
+                fig = px.bar(pd.DataFrame(top).iloc[::-1], x='gmv', y='product', orientation='h',
+                             labels={'gmv': 'GMV', 'product': ''})
+                fig.update_traces(marker_color=TEAL)
+                st.plotly_chart(fig, width='stretch', config={'displayModeBar': False})
             else:
                 st.info('Sales charts appear after customers place orders.')
     with tabs[1]:
@@ -194,21 +170,28 @@ if role in ('admin', 'vendor'):
         else:
             st.info('No orders yet.')
     with tabs[3]:
-        st.subheader('Demand forecasting')
-        st.caption('7-day moving average baseline; forecasts are illustrative, not validated ML predictions.')
+        st.subheader('Demand forecast')
+        note('Weekly forecast from the Random Forest demand model (4-week average when a product has under '
+             '12 weeks of sales). The Inventory page has the full forecast, alerts and reorder plan.')
         ps = api('GET', '/api/products/mine') if role == 'vendor' else api('GET', '/api/products')
         if ps:
             pid = st.selectbox('Select a product', [p['id'] for p in ps], format_func=lambda x: next(p['name'] for p in ps if p['id']==x))
-            forecast = api('GET', '/api/analytics/forecast', params={'product_id':pid, 'days':7})
-            if forecast:
-                f1, f2 = st.columns(2)
+            forecast = api('GET', f'/api/inventory/forecast/{pid}', params={'weeks': 4})
+            if forecast and forecast.get('weekly'):
+                f1, f2, f3 = st.columns(3)
                 f1.metric('Predicted units per day', forecast['predicted_daily_units'])
                 f2.metric('Available stock', forecast['current_stock'])
-                st.line_chart(pd.DataFrame(forecast['forecast']).set_index('date')['predicted_units'])
+                f3.metric('Days of stock', forecast['estimated_days_of_stock'] or '—')
+                fig = px.line(pd.DataFrame(forecast['weekly']), x='week', y='forecast', markers=True,
+                              labels={'week': 'Week ending', 'forecast': 'Units'})
+                fig.update_traces(line=dict(color=VIOLET, dash='dot'))
+                st.plotly_chart(fig, width='stretch', config={'displayModeBar': False})
+            elif forecast:
+                st.info('No sales yet for this product.')
         st.subheader('Customer segments')
         if segments:
             st.dataframe(pd.DataFrame(segments['segments']), hide_index=True, width='stretch')
-            st.caption('Transparent rule-based recency/frequency segmentation (not clustering).')
+            st.caption('Simple rule-based recency/frequency groups. The Customers page has K-Means segments.')
         if role == 'admin':
             st.subheader('Vendor comparison')
             ranking = api('GET', '/api/analytics/vendors')
@@ -261,9 +244,16 @@ elif role == 'customer':
         else:
             st.info('You have not placed an order.')
     with recommended:
-        recs = api('GET','/api/customers/recommendations/me')
+        recs = api('GET', '/api/recommendations/me', params={'limit': 8})
         if recs:
-            for p in recs:
-                st.write(f"**{p['name']}** · {p['category']} · {currency(p['price'])}")
+            shown = tuple(r['product']['id'] for r in recs)
+            if st.session_state.get('rec_logged') != shown:
+                api('POST', '/api/recommendations/feedback', quiet=True,
+                    json={'event': 'impression', 'product_ids': list(shown)})
+                st.session_state['rec_logged'] = shown
+            for r in recs:
+                p = r['product']
+                st.markdown(f"<div class='ss-rec'><b>{p['name']}</b> · {currency(p['price'])}<br>"
+                            f"<span>{r['reason']}</span></div>", unsafe_allow_html=True)
         else:
             st.info('Browse or place an order to receive personalized product suggestions.')

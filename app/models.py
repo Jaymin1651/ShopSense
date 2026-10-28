@@ -1,7 +1,7 @@
 """Relational schema for multi-vendor marketplace and analytics."""
 from datetime import datetime, timezone
 from decimal import Decimal
-from sqlalchemy import String, Integer, DateTime, ForeignKey, Numeric, UniqueConstraint, Index, Text
+from sqlalchemy import String, Integer, DateTime, ForeignKey, Numeric, Index, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
@@ -41,9 +41,28 @@ class Product(Base):
     description: Mapped[str] = mapped_column(Text, default='')
     category: Mapped[str] = mapped_column(String(100), index=True)
     price: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    # Optional purchase cost; enables money-based inventory turnover (COGS / avg inventory value).
+    unit_cost: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     inventory: Mapped['Inventory'] = relationship(back_populates='product', uselist=False, cascade='all,delete-orphan')
+
+
+class Warehouse(Base):
+    __tablename__ = 'warehouses'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), unique=True)
+    location: Mapped[str] = mapped_column(String(200), default='')
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class Category(Base):
+    """Product category hierarchy (e.g. Electronics > Mobile). Products keep their
+    category name; this table supplies the parent for roll-ups."""
+    __tablename__ = 'categories'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), unique=True, index=True)
+    parent_id: Mapped[int | None] = mapped_column(ForeignKey('categories.id'), nullable=True)
 
 
 class Inventory(Base):
@@ -51,7 +70,11 @@ class Inventory(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     product_id: Mapped[int] = mapped_column(ForeignKey('products.id'), unique=True)
     quantity: Mapped[int] = mapped_column(Integer, default=0)
-    low_stock_threshold: Mapped[int] = mapped_column(Integer, default=5)
+    low_stock_threshold: Mapped[int] = mapped_column(Integer, default=5)  # reorder level
+    warehouse_id: Mapped[int | None] = mapped_column(ForeignKey('warehouses.id'), nullable=True)
+    lead_time_days: Mapped[int] = mapped_column(Integer, default=7)
+    last_updated: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow,
+                                                          nullable=True)
     product: Mapped[Product] = relationship(back_populates='inventory')
 
 

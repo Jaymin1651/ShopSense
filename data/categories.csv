@@ -1,0 +1,14 @@
+category_id,category_name,parent_id
+1,Electronics,
+2,Fashion,
+3,Home,
+4,Books,
+5,Mobile,1
+6,Laptop,1
+7,Accessories,1
+8,Men,2
+9,Women,2
+10,Kitchen,3
+11,Decor,3
+12,Fiction,4
+13,Technical,4

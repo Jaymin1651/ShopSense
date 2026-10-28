@@ -2,7 +2,7 @@
 
 A solo college project based on my October 2026 ShopSense concept. The application pairs a **FastAPI + PostgreSQL** marketplace backend with a **Streamlit + Plotly** administrative/vendor/customer web interface. Includes Docker Compose, initial Alembic migration, role-based JWT authentication, automated tests, and optional Render deployment hooks.
 
-> **Scope:** This is a demonstration / academic MVP, not a finished financial marketplace. Checkout **records orders without charging cards**. GMV is order-item value, not collected cash, recognized revenue, or profit. Predictive demand is an explicit moving-average **baseline**, not a validated trained ML model. See [Roadmap](docs/ROADMAP.md) for advanced functionality required by the source concept.
+> **Scope:** This is a demonstration / academic MVP, not a finished financial marketplace. Checkout **records orders without charging cards**. GMV is order-item value, not collected cash, recognized revenue, or profit. Milestone 2 adds a trained weekly demand forecaster, K-Means customer segments and a collaborative-filtering recommender; their accuracy is measured on held-out data in [the evaluation report](reports/MILESTONE2_EVALUATION.md), including the target that is not met. See [Roadmap](docs/ROADMAP.md) for advanced functionality required by the source concept.
 
 ## Quick start with Docker (recommended)
 
@@ -62,14 +62,38 @@ pytest -q
 | Catalog & inventory | Public catalog, vendor product creation and editing, stock updates, immutable stock movement records |
 | Customer flow | Browse, view and cart interaction events, simulated order placement, customer order history |
 | Sales intelligence | GMV, order count, AOV, trends, top products, vendor leaderboard, low-stock counts |
-| Customer intelligence | Category-affinity product suggestions, rule-based purchase segments |
-| Demand | 7-day moving-average baseline and days-of-stock estimate |
+| Inventory intelligence (M2) | Stock status, warehouses, category hierarchy, inventory turnover, weekly Random Forest demand forecast, low-stock alerts, safety-stock reorder plan, stock movement ledger |
+| Customer analytics (M2) | Spend, AOV, repeat rate, top customers, view→cart→buy funnel, K-Means RFM segments with silhouette and stability |
+| Recommendations (M2) | Hybrid item-based collaborative filtering with reasons, impression/click tracking, CTR, offline HitRate/Precision/Recall |
+| Demand (M1) | 7-day moving-average baseline (`/api/analytics/forecast`, kept for compatibility) |
 | Reporting | Protected vendor-scoped CSV transactions and PDF overview |
 | Delivery | PostgreSQL + Alembic, Docker Compose, GitHub Actions tests/build, optional Render hooks |
 
-**Not yet included:** payment gateway, returns/refunds, real supplier/warehouse feeds, privacy consent workflows, production rate-limiting, trained inventory forecasting, collaborative filtering, clustering, churn prediction, full ETL/scheduling, MLflow integration. These are later milestones; don't describe them as completed.
+**Not yet included:** payment gateway, returns/refunds, real supplier/warehouse feeds, privacy consent workflows, production rate-limiting, churn prediction, full ETL/scheduling, MLflow integration. These are later milestones; don't describe them as completed.
+
+## Milestone 2: inventory intelligence and customer analytics
+
+```bash
+pip install -r requirements-dev.txt -r requirements-dashboard.txt
+alembic upgrade head                      # adds warehouses, categories, lead time, unit cost
+python -m scripts.seed_milestone2         # 2 years of synthetic orders (dev only, ~30 s)
+python -m scripts.evaluate_milestone2     # writes reports/MILESTONE2_EVALUATION.md
+python -m scripts.evaluate_milestone2 --olist   # optional: also validate on real Olist data
+```
+
+With Docker: `make seed-m2` after `make up`. Demo logins printed by the seeder: `demo.admin@example.com / DemoAdmin123!`, `vendor1@shopsense.example / DemoVendor123!`, `shopper1@shopsense.example / DemoShopper123!`.
+
+| Target (brief) | Measured | Met | How |
+| --- | --- | --- | --- |
+| Forecast accuracy ≥ 80% | 84.2% | Yes | 1 − WAPE, weekly per category, last 12 weeks held out |
+| Clustering quality ≥ 0.85 | 0.34 silhouette | **No** | K-Means k=3 on log RFM; bootstrap stability 0.88 |
+| Recommendation relevance ≥ 75% | 75.1% | Yes | HitRate@10 on purchases in the last 60 days (popularity baseline 51.3%) |
+
+Product-level forecasts reach about 69%, the same as a 4-week average, because single products sell a few units a week. On real Olist data, category forecasts reach 75.5% and the model loses to a naive forecast for the store total. See [the Milestone 2 guide](docs/MILESTONE2_GUIDE.md) for methods, formulas and limitations.
 
 ## Project documentation and mentor guide
+
+- **[Milestone 2 Guide](docs/MILESTONE2_GUIDE.md)** — inventory forecasting, alerts, replenishment, segmentation and recommendation design, evaluation protocol and viva notes.
 
 - **[End-to-End Mentor Implementation Guide](docs/MENTOR_IMPLEMENTATION_GUIDE.md)** — code walkthrough for vendor management, live analytics, Olist historical analytics, API examples, test coverage, and a timed demo script.
 - [Project Documentation & Mentor Guide](docs/PROJECT_GUIDE.md) — Steps 1–20 audit, repository/file guide, database design, implementation gaps, and viva preparation.
@@ -82,9 +106,15 @@ pytest -q
 ShopSense/
 ├── app/
 │   ├── main.py, config.py, database.py, models.py, schemas.py, security.py
-│   ├── routers/  auth.py vendors.py products.py orders.py behavior.py analytics.py
-│   └── services/ analytics.py
-├── dashboard/dashboard.py
+│   ├── inventory/       inventory_tracking.py inventory_forecasting.py stock_alert.py   (M2)
+│   ├── customer/        analytics.py segmentation.py                                    (M2)
+│   ├── recommendation/  recommendation.py                                               (M2)
+│   ├── routers/  auth vendors products orders behavior analytics
+│   │             inventory catalog customer_analytics recommendations                   (M2)
+│   └── services/ analytics.py intelligence.py
+├── data/      synthetic Milestone 2 CSVs (generate_milestone2_data.py, seed 42)
+├── reports/   MILESTONE2_EVALUATION.md, milestone2_evaluation.json
+├── dashboard/ dashboard.py ui.py pages/ (Historical, Inventory, Customers, Recommendations, Milestone 2)
 ├── scripts/bootstrap_admin.py, seed_demo.py
 ├── alembic/versions/0001_initial.py
 ├── tests/  conftest.py test_api.py
@@ -132,6 +162,19 @@ Open `http://localhost:8000/docs` for request and response schemas.
 | GET | `/api/analytics/customer-segments` | Vendor/admin |
 | GET | `/api/analytics/sales.csv` | Vendor/admin |
 | GET | `/api/analytics/sales.pdf` | Vendor/admin |
+| GET | `/api/inventory/overview`, `/status`, `/alerts` | Vendor (own) / admin |
+| GET | `/api/inventory/replenishment?service_level=0.95&review_days=7` | Vendor (own) / admin |
+| GET | `/api/inventory/turnover?days=90` | Vendor (own) / admin |
+| GET | `/api/inventory/forecast/{product_id}?weeks=4` | Owner vendor / admin |
+| GET | `/api/inventory/movements/{product_id}` | Owner vendor / admin |
+| GET / POST | `/api/warehouses` | Vendor+admin / admin |
+| GET / POST | `/api/categories` | Public / admin |
+| GET | `/api/customer-analytics/overview` | Vendor (own) / admin |
+| GET | `/api/customer-analytics/segments?k=3&auto_k=false` | Vendor (own) / admin |
+| GET | `/api/recommendations/me?limit=8` | Customer |
+| POST | `/api/recommendations/feedback` | Customer |
+| GET | `/api/recommendations/metrics` | Admin |
+| GET | `/api/evaluation/milestone2` | Vendor/admin |
 | GET | `/health`, `/ready` | Public |
 
 ## Deploy to GitHub and hosting

@@ -24,7 +24,21 @@ Based on the uploaded **"concept 8 oct 26"** (ShopSense Multi-Vendor E-Commerce 
 
 **Evaluation:** verify at least 100 registration cases with valid, invalid and duplicate payloads; compute `successful_expected_outcomes / test_cases` for the 99% benchmark. Reconcile per-order item line sums with all-vendor GMV under refund-free seed data and compute transactional consistency relative to a reference SQL query for the 98% target. A few passing functional tests do *not* prove these percentage targets.
 
-## Milestone 2: Weeks 3–4 — transactional accuracy
+## Milestone 2: Weeks 3–4 — inventory intelligence & customer analytics (done)
+
+The course brief defines Milestone 2 as the Product & Inventory Analytics Engine plus customer analytics. Delivered:
+
+- Warehouses, category hierarchy, supplier lead time and unit cost (migration `0002`).
+- Inventory tracking, turnover (COGS ÷ average inventory), stock movement ledger.
+- Weekly demand forecasting (pooled Random Forest, chronological holdout, compared with naive baselines).
+- Low-stock alerts graded by days of cover vs lead time; order-up-to replenishment with safety stock.
+- Customer behaviour analytics, K-Means RFM segmentation with silhouette, Davies-Bouldin and stability.
+- Hybrid collaborative-filtering recommendations, click tracking, offline HitRate/Precision/Recall.
+- Dashboard pages for inventory, customers, recommendations and the evaluation scorecard.
+
+**Evaluation** (`reports/MILESTONE2_EVALUATION.md`): forecasting 84.2% (target 80%, met at category level), silhouette 0.34 (target 0.85, **not met**), HitRate@10 75.1% (target 75%, met).
+
+## Deferred: transactional accuracy (previously planned for weeks 3–4)
 
 - Add order idempotency key, order lifecycle + cancellations with stock compensation.
 - Payment status and refund models, **test/sandbox only** until a compliant payment provider is integrated.
@@ -37,10 +51,10 @@ Based on the uploaded **"concept 8 oct 26"** (ShopSense Multi-Vendor E-Commerce 
 ## Milestone 3: Weeks 5–6 — real analytics & ML
 
 - Implement ETL pipeline for a clean synthetic/consented sample dataset with explicit data dictionary, schema checks and deduplication.
-- Forecast units sold per product using daily features (lags, rolling averages, weekday, month, holidays) with chronological train/validation splits; include at least naive moving average, seasonal naive and trained model.
+- (Weekly version done in Milestone 2.) Extend to daily forecasts per product using daily features (lags, rolling averages, weekday, month, holidays) with chronological train/validation splits; include at least naive moving average, seasonal naive and trained model.
 - Track MAE, RMSE, MAPE/sMAPE (with zero-demand safeguards), bias and retraining timestamps; store experiment metadata in **MLflow**.
-- Customer RFM clustering using scikit-learn with privacy-safe identifiers; validate silhouette and stability as appropriate.
-- Personalized recommendations blending content and collaborative interactions; offline metrics such as Precision@K and Recall@K.
+- (Done in Milestone 2.) Customer RFM clustering using scikit-learn with privacy-safe identifiers; validate silhouette and stability as appropriate.
+- (Done in Milestone 2.) Personalized recommendations blending content and collaborative interactions; offline metrics such as Precision@K and Recall@K.
 - Add churn definition, label windows, class imbalance handling and precision/recall for churn-risk classification.
 
 **Exit:** reproducible dataset and model comparison artifacts showing whether ML beats a naive baseline.

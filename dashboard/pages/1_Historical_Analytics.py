@@ -9,8 +9,12 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from historical_data import SOURCE, download_dataset, read_dataset, build_sales, summarize, group_sales
+from session import resolve_user
+from ui import api, apply_style, nav
 
 st.set_page_config(page_title='ShopSense | Historical Analysis', page_icon='📊', layout='wide')
+apply_style()
+nav(resolve_user(st.session_state, lambda: api('GET', '/api/auth/me', quiet=True)))
 st.title('📊 Historical e-commerce analytics')
 st.caption('Real, anonymized Olist order data (2016–2018) · Delivered orders only · Brazilian reais (R$)')
 st.info('This page analyzes an external historical dataset. Its sellers are not the registered vendors in the live ShopSense marketplace.')
