@@ -24,3 +24,7 @@ mlruns/
 mlflow.db
 reports/generated/
 reports/milestone3_evaluation.partial.json
+
+files/
+files.zip
+*.mp4
