@@ -2,17 +2,28 @@
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
+from types import SimpleNamespace
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.models import Order, OrderItem, Product, Vendor, Inventory, Interaction, CustomerProfile, User
 
 
 def sales_rows(db: Session, vendor_id: int | None = None):
-    stmt = (select(OrderItem, Order).join(Order, Order.id == OrderItem.order_id)
+    """(line, order) pairs for non-cancelled orders.
+
+    Only the needed columns are read and wrapped in light objects with the
+    same attribute names, which is several times faster than loading full
+    ORM objects once there are thousands of orders.
+    """
+    stmt = (select(OrderItem.product_id, OrderItem.vendor_id, OrderItem.quantity, OrderItem.unit_price,
+                   Order.id, Order.customer_id, Order.created_at, Order.status)
+            .join(Order, Order.id == OrderItem.order_id)
             .where(Order.status != 'cancelled').order_by(Order.created_at))
     if vendor_id is not None:
         stmt = stmt.where(OrderItem.vendor_id == vendor_id)
-    return db.execute(stmt).all()
+    return [(SimpleNamespace(product_id=r[0], vendor_id=r[1], quantity=r[2], unit_price=r[3]),
+             SimpleNamespace(id=r[4], customer_id=r[5], created_at=r[6], status=r[7]))
+            for r in db.execute(stmt).all()]
 
 
 def get_summary(db: Session, vendor_id: int | None = None):

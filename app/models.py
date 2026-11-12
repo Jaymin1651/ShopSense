@@ -125,3 +125,34 @@ class Interaction(Base):
 
 
 Index('ix_order_items_vendor_order', OrderItem.vendor_id, OrderItem.order_id)
+
+
+class WorkflowRun(Base):
+    """One execution of an automated analytical workflow (Milestone 3)."""
+    __tablename__ = 'workflow_runs'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    job: Mapped[str] = mapped_column(String(60), index=True)
+    trigger: Mapped[str] = mapped_column(String(20), default='schedule')  # schedule, manual, simulation
+    status: Mapped[str] = mapped_column(String(20), default='running', index=True)  # running, success, failed
+    attempts: Mapped[int] = mapped_column(Integer, default=1)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    message: Mapped[str] = mapped_column(Text, default='')
+    metrics: Mapped[str] = mapped_column(Text, default='{}')  # JSON
+
+
+class AnalyticsSnapshot(Base):
+    """Pre-computed analytics result shared by API workers and refreshed by workflows.
+
+    ``data_version`` records which state of the orders/interactions the payload
+    was computed from, so readers can tell whether it is current.
+    """
+    __tablename__ = 'analytics_snapshots'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(80))
+    scope: Mapped[str] = mapped_column(String(40), default='all')
+    data_version: Mapped[str] = mapped_column(String(80))
+    payload: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    __table_args__ = (Index('ix_snapshot_name_scope', 'name', 'scope', unique=True),)

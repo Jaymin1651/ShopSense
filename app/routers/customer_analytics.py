@@ -18,7 +18,8 @@ def scope(user: User):
 @router.get('/overview')
 def overview(db: Session = Depends(get_db), user: User = Depends(staff)):
     """Average spending, order value, repeat rate, top customers and the view-cart-buy funnel."""
-    return svc.customer_overview(db, scope(user))
+    from app.services import bi
+    return bi.serve(db, 'customer_overview', scope(user))['data']
 
 
 @router.get('/segments')

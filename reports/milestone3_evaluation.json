@@ -1,0 +1,357 @@
+{
+  "latency": {
+    "users": 25,
+    "duration_s": 60,
+    "write_rate_per_s": 1.0,
+    "requests": 1201,
+    "think_time_s": [
+      0.5,
+      2.0
+    ],
+    "server_p95_ms": 104.7,
+    "server_p50_ms": 14.5,
+    "throughput_rps": 20.0,
+    "errors": 0,
+    "error_rate_pct": 0.0,
+    "overall": {
+      "p50_ms": 20.6,
+      "p95_ms": 169.0,
+      "p99_ms": 267.9,
+      "mean_ms": 39.0
+    },
+    "worst_endpoint_p95_ms": 256.1,
+    "endpoints_within_target": 19,
+    "endpoint_count": 19,
+    "endpoints": [
+      {
+        "path": "/api/analytics/customers",
+        "requests": 21,
+        "p50_ms": 10.3,
+        "p95_ms": 242.5,
+        "p99_ms": 277.7
+      },
+      {
+        "path": "/api/analytics/revenue",
+        "requests": 19,
+        "p50_ms": 44.0,
+        "p95_ms": 165.2,
+        "p99_ms": 256.8
+      },
+      {
+        "path": "/api/analytics/vendor-performance",
+        "requests": 24,
+        "p50_ms": 10.4,
+        "p95_ms": 161.2,
+        "p99_ms": 185.9
+      },
+      {
+        "path": "/api/customer-analytics/overview",
+        "requests": 27,
+        "p50_ms": 11.7,
+        "p95_ms": 48.4,
+        "p99_ms": 147.2
+      },
+      {
+        "path": "/api/customer-analytics/segments",
+        "requests": 29,
+        "p50_ms": 42.8,
+        "p95_ms": 142.2,
+        "p99_ms": 154.1
+      },
+      {
+        "path": "/api/customer-intelligence/overview",
+        "requests": 73,
+        "p50_ms": 11.1,
+        "p95_ms": 79.3,
+        "p99_ms": 163.6
+      },
+      {
+        "path": "/api/forecast/summary",
+        "requests": 85,
+        "p50_ms": 9.7,
+        "p95_ms": 38.7,
+        "p99_ms": 100.6
+      },
+      {
+        "path": "/api/forecast/{id}",
+        "requests": 51,
+        "p50_ms": 18.6,
+        "p95_ms": 79.9,
+        "p99_ms": 84.0
+      },
+      {
+        "path": "/api/inventory/alerts",
+        "requests": 79,
+        "p50_ms": 42.5,
+        "p95_ms": 256.1,
+        "p99_ms": 289.8
+      },
+      {
+        "path": "/api/inventory/overview",
+        "requests": 66,
+        "p50_ms": 10.1,
+        "p95_ms": 102.7,
+        "p99_ms": 259.2
+      },
+      {
+        "path": "/api/inventory/replenishment",
+        "requests": 86,
+        "p50_ms": 34.3,
+        "p95_ms": 205.1,
+        "p99_ms": 313.6
+      },
+      {
+        "path": "/api/inventory/status",
+        "requests": 39,
+        "p50_ms": 37.8,
+        "p95_ms": 73.2,
+        "p99_ms": 147.8
+      },
+      {
+        "path": "/api/live/kpis",
+        "requests": 95,
+        "p50_ms": 28.0,
+        "p95_ms": 116.0,
+        "p99_ms": 193.6
+      },
+      {
+        "path": "/api/products",
+        "requests": 152,
+        "p50_ms": 11.5,
+        "p95_ms": 59.5,
+        "p99_ms": 210.4
+      },
+      {
+        "path": "/api/recommendations/me",
+        "requests": 164,
+        "p50_ms": 36.0,
+        "p95_ms": 231.0,
+        "p99_ms": 272.2
+      },
+      {
+        "path": "/api/recommendations/segments",
+        "requests": 24,
+        "p50_ms": 11.3,
+        "p95_ms": 103.8,
+        "p99_ms": 157.1
+      },
+      {
+        "path": "/api/revenue/benchmark",
+        "requests": 84,
+        "p50_ms": 11.4,
+        "p95_ms": 195.3,
+        "p99_ms": 248.0
+      },
+      {
+        "path": "/api/revenue/cohorts",
+        "requests": 22,
+        "p50_ms": 10.0,
+        "p95_ms": 193.8,
+        "p99_ms": 250.2
+      },
+      {
+        "path": "/api/revenue/overview",
+        "requests": 61,
+        "p50_ms": 15.6,
+        "p95_ms": 199.4,
+        "p99_ms": 250.4
+      }
+    ],
+    "writes": {
+      "orders": 58,
+      "ok": 58,
+      "p95_ms": 164.8
+    },
+    "note": "Each endpoint is called once before timing starts, so one-off model loading is excluded. Times are measured by the client and include queueing; server_p95_ms is time inside the API."
+  },
+  "load_sweep": [
+    {
+      "users": 10,
+      "throughput_rps": 8.1,
+      "p50_ms": 15.4,
+      "p95_ms": 88.5,
+      "p99_ms": 220.1,
+      "mean_ms": 28.3,
+      "server_p95_ms": 59.3,
+      "errors": 0
+    },
+    {
+      "users": 25,
+      "throughput_rps": 20.0,
+      "p50_ms": 20.6,
+      "p95_ms": 169.0,
+      "p99_ms": 267.9,
+      "mean_ms": 39.0,
+      "server_p95_ms": 104.7,
+      "errors": 0
+    },
+    {
+      "users": 50,
+      "throughput_rps": 40.0,
+      "p50_ms": 22.1,
+      "p95_ms": 244.3,
+      "p99_ms": 443.2,
+      "mean_ms": 53.4,
+      "server_p95_ms": 162.8,
+      "errors": 0
+    }
+  ],
+  "consistency": {
+    "checks": 193,
+    "consistent": 193,
+    "ambiguous_skipped": 7,
+    "consistency_pct": 100.0,
+    "writes": 200,
+    "visibility_ms_p95": 29.3,
+    "dashboard_refresh_s": 5,
+    "snapshot_orders_behind_after_load": 54
+  },
+  "workflows": {
+    "duration_s": 120,
+    "every_s": 15,
+    "runs": 36,
+    "success": 36,
+    "failed": 0,
+    "retried_runs": 0,
+    "success_rate_pct": 100.0,
+    "jobs": [
+      {
+        "job": "refresh_snapshots",
+        "runs": 4,
+        "success": 4,
+        "failed": 0,
+        "avg_duration_ms": 28824
+      },
+      {
+        "job": "data_quality",
+        "runs": 8,
+        "success": 8,
+        "failed": 0,
+        "avg_duration_ms": 173
+      },
+      {
+        "job": "retrain_forecast",
+        "runs": 3,
+        "success": 3,
+        "failed": 0,
+        "avg_duration_ms": 37345
+      },
+      {
+        "job": "retrain_churn",
+        "runs": 8,
+        "success": 8,
+        "failed": 0,
+        "avg_duration_ms": 10087
+      },
+      {
+        "job": "evaluate_models",
+        "runs": 5,
+        "success": 5,
+        "failed": 0,
+        "avg_duration_ms": 15899
+      },
+      {
+        "job": "scheduled_reports",
+        "runs": 8,
+        "success": 8,
+        "failed": 0,
+        "avg_duration_ms": 7420
+      }
+    ]
+  },
+  "generated_at": "2026-11-12 06:57 UTC",
+  "environment": {
+    "api": "http://localhost:8000",
+    "workers": 1,
+    "database": "sqlite",
+    "dataset": "17,791 orders (synthetic demo data)",
+    "machine": "one shared CPU core for the API, the load generator and the scheduler"
+  },
+  "targets": {
+    "api_p95_ms": 300,
+    "consistency_pct": 99,
+    "workflow_success_pct": 100
+  },
+  "milestone2_targets": [
+    {
+      "criterion": "Inventory forecasting accuracy",
+      "target": ">= 80%",
+      "value": 84.19,
+      "met": true,
+      "metric": "1 - WAPE, weekly, 12-week holdout, category level",
+      "context": "Store total 94.97%, single products 68.73% (4-week moving average: 68.82%). Individual products sell a few units a week, so week-to-week noise caps product-level accuracy. Real Olist data: top-20 categories 75.49%, store total 81.12%."
+    },
+    {
+      "criterion": "Customer segmentation quality",
+      "target": ">= 0.85",
+      "value": 0.3387,
+      "met": false,
+      "metric": "Silhouette score, K-Means k=3 on log RFM",
+      "context": "Bootstrap stability (adjusted Rand) 0.8756, best silhouette over k=2..6 0.4563. Real purchase behaviour is a continuum, so silhouette values of 0.3-0.5 are typical; 0.85 needs almost perfectly separated groups. Real Olist customers: silhouette 0.4285."
+    },
+    {
+      "criterion": "Recommendation relevance",
+      "target": ">= 75%",
+      "value": 75.14,
+      "met": true,
+      "metric": "HitRate@10 on purchases in the final 60 days",
+      "context": "Popularity baseline 51.25%. Precision@10 10.67%, Recall@10 60.4%. The catalogue has 58 products, so 10 picks cover a large share of it."
+    }
+  ],
+  "scorecard": [
+    {
+      "criterion": "API response time",
+      "target": "\u2264 300 ms (p95)",
+      "value": 169.0,
+      "display": "169 ms",
+      "met": true,
+      "metric": "95th percentile over all analytical GET requests",
+      "context": "25 users clicking every 0.5-2.0 s plus 1.0 new order/s for 60 s: 1,201 requests (20.0/s), 0.0% errors, p99 268 ms, time inside the API p95 105 ms. 19 of 19 endpoints within 300 ms at p95; slowest 256 ms. Load sweep (p95): 10 users 88 ms, 25 users 169 ms, 50 users 244 ms."
+    },
+    {
+      "criterion": "Dashboard data consistency",
+      "target": "\u2265 99%",
+      "value": 100.0,
+      "display": "100.0%",
+      "met": true,
+      "metric": "Live dashboard numbers equal to a direct database count",
+      "context": "193 of 193 checks matched while orders were being placed (7 checks skipped because an order landed mid-check). New orders showed up in 29 ms (p95); the dashboard refreshes every 5 s. Heavier analytics panels (revenue trends, benchmark, segments) refresh in the background at most every 30 s and show how many orders behind they are; right after the load test they were 54 orders behind."
+    },
+    {
+      "criterion": "Automated workflow success",
+      "target": "100%",
+      "value": 100.0,
+      "display": "100.0%",
+      "met": true,
+      "metric": "Finished workflow runs that succeeded",
+      "context": "36 of 36 runs across 6 jobs succeeded (0 needed a retry). APScheduler ran every job every 15 s for 120 s, after one on-demand run of each."
+    },
+    {
+      "criterion": "Inventory forecasting accuracy (Milestone 2)",
+      "target": ">= 80%",
+      "value": 84.19,
+      "met": true,
+      "metric": "1 - WAPE, weekly, 12-week holdout, category level",
+      "context": "Store total 94.97%, single products 68.73% (4-week moving average: 68.82%). Individual products sell a few units a week, so week-to-week noise caps product-level accuracy. Real Olist data: top-20 categories 75.49%, store total 81.12%.",
+      "display": "84.19%"
+    },
+    {
+      "criterion": "Customer segmentation quality (Milestone 2)",
+      "target": ">= 0.85",
+      "value": 0.3387,
+      "met": false,
+      "metric": "Silhouette score, K-Means k=3 on log RFM",
+      "context": "Bootstrap stability (adjusted Rand) 0.8756, best silhouette over k=2..6 0.4563. Real purchase behaviour is a continuum, so silhouette values of 0.3-0.5 are typical; 0.85 needs almost perfectly separated groups. Real Olist customers: silhouette 0.4285.",
+      "display": "0.3387"
+    },
+    {
+      "criterion": "Recommendation relevance (Milestone 2)",
+      "target": ">= 75%",
+      "value": 75.14,
+      "met": true,
+      "metric": "HitRate@10 on purchases in the final 60 days",
+      "context": "Popularity baseline 51.25%. Precision@10 10.67%, Recall@10 60.4%. The catalogue has 58 products, so 10 picks cover a large share of it.",
+      "display": "75.14%"
+    }
+  ]
+}

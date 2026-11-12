@@ -1,4 +1,11 @@
-import pytest
+import os
+
+# Milestone 3: no background refresh threads against the single in-memory test
+# connection, and no MLflow registry unless a test turns it on explicitly.
+os.environ.setdefault('SHOPSENSE_BACKGROUND_REFRESH', '0')
+os.environ.setdefault('MLFLOW_ENABLED', '0')
+
+import pytest  # noqa: E402
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -13,7 +20,14 @@ from app.services import intelligence
 @pytest.fixture()
 def client():
     intelligence.clear_cache()  # trained models are cached per process; tests use fresh databases
-    engine = create_engine('sqlite://', connect_args={'check_same_thread': False}, poolclass=StaticPool)
+    # Default: in-memory SQLite. Set TEST_DATABASE_URL to run the same tests on PostgreSQL
+    # (the database is emptied before and after each test).
+    url = os.getenv('TEST_DATABASE_URL')
+    if url:
+        engine = create_engine(url)
+        Base.metadata.drop_all(bind=engine)
+    else:
+        engine = create_engine('sqlite://', connect_args={'check_same_thread': False}, poolclass=StaticPool)
     Base.metadata.create_all(bind=engine)
     session_factory = sessionmaker(bind=engine, expire_on_commit=False)
     with session_factory() as db:
@@ -28,6 +42,8 @@ def client():
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+    if url:
+        Base.metadata.drop_all(bind=engine)
     engine.dispose()
 
 

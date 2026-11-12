@@ -29,11 +29,11 @@ c[0].metric('Units in stock', f"{overview['units_in_stock']:,}")
 c[1].metric('Low stock', overview['low_stock'])
 c[2].metric('Out of stock', overview['out_of_stock'])
 turn = overview.get('turnover_90d')
-c[3].metric('Turnover, 90 days', f'{turn:.2f}×' if turn is not None else '—',
+c[3].metric('Turnover (90d)', f'{turn:.2f}×' if turn is not None else '—',
             help='Cost of goods sold ÷ average inventory value (units when costs are missing).')
-c[4].metric('Demand, next 7 days', f"{overview['forecast_units_next_7_days']:,.0f}",
+c[4].metric('Demand, 7 days', f"{overview['forecast_units_next_7_days']:,.0f}",
             help='Forecast demand summed over all products.')
-c[5].metric('Products to reorder', overview['reorder_lines'],
+c[5].metric('To reorder', overview['reorder_lines'],
             help=f"{overview['reorder_units']:,} units in total at a 95% service level.")
 
 status = pd.DataFrame(api('GET', '/api/inventory/status') or [])
@@ -156,8 +156,9 @@ with tabs[2]:
             m[0].metric('In stock', fc['current_stock'])
             m[1].metric('Forecast, next week', f"{fut['forecast'].iloc[0]:.0f} units")
             m[2].metric('Days of stock', fc['estimated_days_of_stock'] if fc['estimated_days_of_stock'] is not None else '—')
-            m[3].metric('Sells out', f"week of {fc['stock_runs_out_week']}" if fc['stock_runs_out_week']
-                        else f'not within {weeks} weeks')
+            runs_out = fc['stock_runs_out_week']
+            m[3].metric('Sells out', f"by {pd.Timestamp(runs_out):%d %b}" if runs_out else f'Not in {weeks} wk',
+                        help='Week in which forecast demand adds up to more than current stock.')
             note(fc.get('note') or f"Method: pooled weekly Random Forest. Shaded area: {fc['interval'].lower()}")
         elif fc:
             st.info('This product has no sales yet, so there is nothing to forecast.')

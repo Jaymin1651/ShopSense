@@ -18,3 +18,9 @@ htmlcov/
 data/olist/
 data/raw/
 data/processed/
+
+# Milestone 3: MLflow store and scheduled report output
+mlruns/
+mlflow.db
+reports/generated/
+reports/milestone3_evaluation.partial.json

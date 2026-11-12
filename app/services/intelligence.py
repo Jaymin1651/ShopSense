@@ -27,6 +27,8 @@ from app.inventory.stock_alert import demand_from_history, low_stock_alert, repl
 from app.models import (Category, Interaction, Inventory, InventoryMovement, Order, OrderItem, Product, Vendor,
                         Warehouse)
 from app.recommendation.recommendation import HybridRecommender, build_events
+from app.analytics import snapshots
+from app.forecasting.service import production_forecaster, reset as production_reset
 
 REPORT_PATH = Path(__file__).resolve().parents[2] / 'reports' / 'milestone2_evaluation.json'
 _CACHE: dict[str, tuple[float, object, object]] = {}
@@ -34,20 +36,56 @@ _LOCK = threading.Lock()
 CACHE_SECONDS = 900
 
 
-def _cached(name: str, fingerprint, build):
+MODEL_REFRESH_SECONDS = 120   # at most one background rebuild per model every 2 minutes
+STALE_LIMIT_SECONDS = 21600   # after 6 hours without a rebuild, rebuild inside the request
+
+
+def _cached(name: str, fingerprint, build, db: Session | None = None):
+    """Return a cached model/table; ``build(session)`` makes a new one.
+
+    When the data has changed, the previous value is returned at once and a
+    rebuild is queued on the single background worker (at most once per
+    ``MODEL_REFRESH_SECONDS``), so new orders never make requests wait for
+    retraining or compete with them for the CPU. Models are also retrained on a
+    schedule (app.scheduler).
+    """
+    now = time.time()
     with _LOCK:
         hit = _CACHE.get(name)
-        if hit and hit[1] == fingerprint and time.time() - hit[0] < CACHE_SECONDS:
-            return hit[2]
-    value = build()
+    if hit and hit[1] == fingerprint and now - hit[0] < CACHE_SECONDS:
+        return hit[2]
+    if hit and db is not None and snapshots.SWR_ENABLED and now - hit[0] < STALE_LIMIT_SECONDS:
+        _rebuild_in_background(name, fingerprint, build, db)
+        return hit[2]
+    value = build(db)
     with _LOCK:
         _CACHE[name] = (time.time(), fingerprint, value)
     return value
 
 
+def _rebuild_in_background(name, fingerprint, build, db):
+    from app.analytics import refresher
+    bind = db.get_bind()
+
+    def work():
+        with Session(bind=bind) as session:
+            value = build(session)
+        with _LOCK:
+            _CACHE[name] = (time.time(), fingerprint, value)
+    refresher.submit(f'model:{name}', work, MODEL_REFRESH_SECONDS)
+
+
+def _model_stamp() -> float:
+    """Latest rebuild time of any cached model, so memoised answers follow model refreshes."""
+    with _LOCK:
+        return max((v[0] for v in _CACHE.values()), default=0.0)
+
+
 def clear_cache():
     with _LOCK:
         _CACHE.clear()
+    snapshots.clear_memo()
+    production_reset()
 
 
 def _now() -> pd.Timestamp:
@@ -117,24 +155,40 @@ def events_fingerprint(db: Session):
 
 # --------------------------------------------------------------------- inventory
 
+_FORECAST_SOURCE = {'label': None}
+
+
 def forecaster(db: Session) -> tuple[DemandForecaster | None, pd.DataFrame]:
-    """Pooled weekly model trained on every product's sales (cached)."""
-    def build():
-        sales = load_sales(db)
+    """Weekly demand model and weekly history (cached).
+
+    Uses the MLflow ``production`` model when one is registered; otherwise
+    trains a pooled model in-process from current orders.
+    """
+    def build(session):
+        sales = load_sales(session)
         if sales.empty:
-            return None, pd.DataFrame(columns=['series', 'week', 'units'])
+            return None, pd.DataFrame(columns=['series', 'week', 'units']), None
         weekly = weekly_series(sales, 'product_id', end=_now())
         weeks = weekly['week'].nunique() if not weekly.empty else 0
         if weeks < MIN_TRAIN_WEEKS:
-            return None, weekly
-        return DemandForecaster(n_estimators=150).fit(weekly), weekly
-    return _cached('forecaster', sales_fingerprint(db), build)
+            return None, weekly, None
+        registered, label = production_forecaster()
+        if registered is not None:
+            return registered, weekly, label
+        return DemandForecaster(n_estimators=150).fit(weekly), weekly, 'Random Forest trained in-process'
+    model, weekly, label = _cached('forecaster', sales_fingerprint(db), build, db)
+    _FORECAST_SOURCE['label'] = label
+    return model, weekly
+
+
+def forecast_source() -> str | None:
+    return _FORECAST_SOURCE['label']
 
 
 def demand_table(db: Session, products: list[int]) -> pd.DataFrame:
     """Expected daily demand per product: next-week ML forecast / 7 if a model
     exists, otherwise the last 8 weeks' empirical average (cached)."""
-    table = _cached('demand', sales_fingerprint(db), lambda: _demand_all(db))
+    table = _cached('demand', sales_fingerprint(db), _demand_all, db)
     table = table.loc[table['product_id'].isin(products)].reset_index(drop=True)
     for col in ('daily_demand', 'daily_demand_std'):
         if col in table:
@@ -177,6 +231,10 @@ STATUS_COLUMNS = ['product_id', 'name', 'category', 'vendor', 'warehouse', 'curr
 
 
 def stock_status(db: Session, vendor_id: int | None) -> list[dict]:
+    return snapshots.by_version(db, ('stock_status', vendor_id, _model_stamp()), lambda: _stock_status(db, vendor_id))
+
+
+def _stock_status(db: Session, vendor_id: int | None) -> list[dict]:
     inv = load_inventory(db, vendor_id)
     if inv.empty:
         return []
@@ -189,6 +247,10 @@ def stock_status(db: Session, vendor_id: int | None) -> list[dict]:
 
 
 def alerts(db: Session, vendor_id: int | None) -> list[dict]:
+    return snapshots.by_version(db, ('alerts', vendor_id, _model_stamp()), lambda: _alerts(db, vendor_id))
+
+
+def _alerts(db: Session, vendor_id: int | None) -> list[dict]:
     inv = load_inventory(db, vendor_id)
     if inv.empty:
         return []
@@ -202,6 +264,13 @@ def alerts(db: Session, vendor_id: int | None) -> list[dict]:
 
 def replenishment_plan(db: Session, vendor_id: int | None, service_level: float, review_days: int,
                        include_all: bool = False) -> list[dict]:
+    key = ('replenishment', vendor_id, service_level, review_days, include_all, _model_stamp())
+    return snapshots.by_version(db, key, lambda: _replenishment_plan(db, vendor_id, service_level, review_days,
+                                                                      include_all))
+
+
+def _replenishment_plan(db: Session, vendor_id: int | None, service_level: float, review_days: int,
+                        include_all: bool = False) -> list[dict]:
     inv = load_inventory(db, vendor_id)
     if inv.empty:
         return []
@@ -231,9 +300,30 @@ def turnover(db: Session, vendor_id: int | None, days: int) -> dict:
             'formula': 'turnover = COGS / average inventory value (cost basis) or units sold / average units (units basis)'}
 
 
+def forecast_table(db: Session) -> dict:
+    """12-week forecasts for every product, computed in one batch (cached)."""
+    def build(session):
+        model, weekly = forecaster(session)
+        return model.forecast_many(weekly, 12) if model is not None and not weekly.empty else {}
+    return _cached('forecast_table', sales_fingerprint(db), build, db)
+
+
 def product_forecast(db: Session, product: Product, weeks: int) -> dict:
+    """Forecast for one product plus its live stock position.
+
+    The weekly forecast comes from the batch table (or a moving average when
+    the product has too little history); stock figures are read fresh.
+    """
     model, weekly = forecaster(db)
-    result = forecast_series(weekly, str(product.id), weeks, model)
+    table = forecast_table(db)
+    name = str(product.id)
+    if name in table:
+        history = weekly.loc[weekly['series'] == name].set_index('week')['units'].sort_index().tail(26)
+        base = {'method': 'random_forest_pooled_weekly', 'weekly': table[name][:weeks],
+                'history': [{'week': w.date().isoformat(), 'units': float(u)} for w, u in history.items()]}
+    else:
+        base = forecast_series(weekly, name, weeks, None)
+    result = {**base}
     stock = product.inventory.quantity
     next_week = result['weekly'][0]['forecast'] if result['weekly'] else 0
     daily = next_week / 7
@@ -296,32 +386,49 @@ def customer_overview(db: Session, vendor_id: int | None) -> dict:
 
 
 def customer_segments(db: Session, vendor_id: int | None, k: int | None) -> dict:
-    sales = load_sales(db, vendor_id)
-    stats = customer_stats(sales, as_of=_now()) if not sales.empty else pd.DataFrame()
+    return snapshots.by_version(db, ('segments_view', vendor_id, k, _model_stamp()),
+                                lambda: _customer_segments(db, vendor_id, k))
 
-    def build():
+
+def _customer_segments(db: Session, vendor_id: int | None, k: int | None) -> dict:
+    def build(session):
+        sales = load_sales(session, vendor_id)
+        stats = customer_stats(sales, as_of=_now()) if not sales.empty else pd.DataFrame()
+        if len(stats) < 10:
+            return {'available': False, 'customers': int(len(stats))}
         return segment_customers(stats, k=k, stability_runs=5)
-    if len(stats) < 10:
+    result = _cached(f'segments:{vendor_id}:{k}', sales_fingerprint(db), build, db)
+    if result.get('available') is False:
         return {'available': False, 'reason': 'K-Means needs at least 10 customers with purchases.',
-                'customers': int(len(stats))}
-    result = _cached(f'segments:{vendor_id}:{k}', sales_fingerprint(db), build)
+                'customers': result['customers']}
     points = result['assignments'].sample(min(1500, len(result['assignments'])), random_state=1)
     return {'available': True, 'k': result['k'], 'method': result['method'], 'metrics': result['metrics'],
             'profiles': result['profiles'].to_dict('records'),
             'points': _clean(points, ['customer_id', 'recency_days', 'orders', 'total_spent', 'segment'])}
 
 
+def segment_assignments(db: Session, vendor_id: int | None = None, k: int = 3) -> pd.DataFrame:
+    """customer_id, segment for every customer (shared K-Means cache)."""
+    _customer_segments(db, vendor_id, k)
+    with _LOCK:
+        hit = _CACHE.get(f'segments:{vendor_id}:{k}')
+    result = hit[2] if hit else {}
+    if result.get('available') is False or 'assignments' not in result:
+        return pd.DataFrame(columns=['customer_id', 'segment'])
+    return result['assignments'][['customer_id', 'segment']]
+
+
 # ----------------------------------------------------------------- recommendations
 
 def recommender(db: Session) -> HybridRecommender | None:
-    def build():
-        events = build_events(load_interactions(db), load_sales(db))
+    def build(session):
+        events = build_events(load_interactions(session), load_sales(session))
         if events.empty:
             return None
-        products = pd.DataFrame(db.execute(select(Product.id, Product.name, Product.category)).all(),
+        products = pd.DataFrame(session.execute(select(Product.id, Product.name, Product.category)).all(),
                                 columns=['product_id', 'name', 'category'])
         return HybridRecommender().fit(events, products)
-    return _cached('recommender', events_fingerprint(db), build)
+    return _cached('recommender', events_fingerprint(db), build, db)
 
 
 def available_products(db: Session) -> dict[int, Product]:
@@ -332,17 +439,23 @@ def available_products(db: Session) -> dict[int, Product]:
 
 def recommend_for(db: Session, customer_id: int, limit: int, exclude: str = 'purchased') -> list[tuple[Product, dict]]:
     catalogue = available_products(db)
+    key = ('recommend', customer_id, limit, exclude, _model_stamp())
+    ranked = snapshots.by_version(db, key, lambda: _rank(db, customer_id, limit, exclude, set(catalogue)))
+    return [(catalogue[r['product_id']], r) for r in ranked if r['product_id'] in catalogue]
+
+
+def _rank(db: Session, customer_id: int, limit: int, exclude: str, catalogue: set) -> list[dict]:
     model = recommender(db)
     if model is None:
-        ranked = [{'product_id': pid, 'score': 0.0, 'reason': 'New in the catalogue'} for pid in sorted(catalogue, reverse=True)]
-    else:
-        ranked = model.recommend(customer_id, k=limit, exclude=exclude, candidates=set(catalogue))
-        if len(ranked) < limit:  # products the model has never seen
-            known = {r['product_id'] for r in ranked} | (model.seen.get(customer_id, set()) if exclude == 'seen'
-                                                          else model.purchased.get(customer_id, set()))
-            ranked += [{'product_id': pid, 'score': 0.0, 'reason': 'New in the catalogue'}
-                       for pid in sorted(catalogue, reverse=True) if pid not in known]
-    return [(catalogue[r['product_id']], r) for r in ranked[:limit] if r['product_id'] in catalogue]
+        return [{'product_id': pid, 'score': 0.0, 'reason': 'New in the catalogue'}
+                for pid in sorted(catalogue, reverse=True)][:limit]
+    ranked = model.recommend(customer_id, k=limit, exclude=exclude, candidates=catalogue)
+    if len(ranked) < limit:  # products the model has never seen
+        known = {r['product_id'] for r in ranked} | (model.seen.get(customer_id, set()) if exclude == 'seen'
+                                                      else model.purchased.get(customer_id, set()))
+        ranked += [{'product_id': pid, 'score': 0.0, 'reason': 'New in the catalogue'}
+                   for pid in sorted(catalogue, reverse=True) if pid not in known]
+    return ranked[:limit]
 
 
 def recommendation_metrics(db: Session) -> dict:

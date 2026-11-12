@@ -32,7 +32,8 @@ def owned_product(db: Session, product_id: int, user: User) -> Product:
 @router.get('/overview')
 def overview(db: Session = Depends(get_db), user: User = Depends(staff)):
     """Dashboard KPIs: stock, low stock, turnover, forecast demand, reorder needs."""
-    return svc.inventory_overview(db, scope(user))
+    from app.services import bi
+    return bi.serve(db, 'inventory_overview', scope(user))['data']
 
 
 @router.get('/status')
@@ -59,7 +60,10 @@ def replenishment(service_level: float = Query(default=0.95, ge=0.8, le=0.99),
 def turnover(days: int = Query(default=90, ge=7, le=365), db: Session = Depends(get_db),
              user: User = Depends(staff)):
     """Inventory turnover per product and for the whole portfolio."""
-    return svc.turnover(db, scope(user), days)
+    from app.analytics import snapshots
+    from app.services.bi import scope_key
+    vid = scope(user)
+    return snapshots.serve(db, f'turnover_{days}', scope_key(vid), lambda s: svc.turnover(s, vid, days))['data']
 
 
 @router.get('/forecast/{product_id}')

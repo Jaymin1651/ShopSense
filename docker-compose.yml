@@ -25,6 +25,10 @@ services:
       CORS_ORIGINS: http://localhost:8501
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@shopsense.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-this-before-sharing}
+      MLFLOW_TRACKING_URI: sqlite:////mlflow/mlflow.db
+      MLFLOW_ARTIFACT_ROOT: file:///mlflow/mlruns
+    volumes:
+      - mlflow_data:/mlflow
     ports:
       - '127.0.0.1:8000:8000'
     depends_on:
@@ -34,6 +38,34 @@ services:
       test: ['CMD', 'python', '-c', 'import urllib.request;urllib.request.urlopen("http://localhost:8000/ready", timeout=5)']
       interval: 10s
       retries: 10
+  scheduler:
+    # Milestone 3 automated workflows (APScheduler): retraining, snapshots, data checks, reports.
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    command: ['python', '-m', 'app.scheduler']
+    environment:
+      DATABASE_URL: postgresql+psycopg://shopsense:${POSTGRES_PASSWORD:-local_only_password}@db:5432/shopsense
+      JWT_SECRET: ${JWT_SECRET:-dev-only-change-me-use-longer-key-here}
+      ENVIRONMENT: development
+      MLFLOW_TRACKING_URI: sqlite:////mlflow/mlflow.db
+      MLFLOW_ARTIFACT_ROOT: file:///mlflow/mlruns
+    volumes:
+      - mlflow_data:/mlflow
+    depends_on:
+      api:
+        condition: service_healthy
+  mlflow:
+    # MLflow UI for the model registry at http://localhost:5000
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    command: ['mlflow', 'ui', '--backend-store-uri', 'sqlite:////mlflow/mlflow.db', '--default-artifact-root',
+              'file:///mlflow/mlruns', '--host', '0.0.0.0', '--port', '5000']
+    volumes:
+      - mlflow_data:/mlflow
+    ports:
+      - '127.0.0.1:5000:5000'
   dashboard:
     build:
       context: .
@@ -47,3 +79,4 @@ services:
         condition: service_healthy
 volumes:
   shopsense_db:
+  mlflow_data:

@@ -149,3 +149,22 @@ def test_evaluation_report_endpoint(client, setup_marketplace):
     assert client.get('/api/evaluation/milestone2', headers=s['customer']).status_code == 403
     report = client.get('/api/evaluation/milestone2', headers=s['admin']).json()
     assert 'scorecard' in report or report.get('available') is False
+
+
+def test_small_healthy_store_every_endpoint_works(client, setup_marketplace):
+    """Regression for the live 500: few orders and nothing low on stock."""
+    s = setup_marketplace
+    client.put(f"/api/products/{s['product_id']}/inventory", headers=s['vendor'], json={'quantity': 80})
+    for _ in range(4):
+        assert client.post('/api/orders', headers=s['customer'],
+                           json={'items': [{'product_id': s['product_id'], 'quantity': 1}]}).status_code == 201
+    for headers in (s['admin'], s['vendor']):
+        for path in ('/api/inventory/overview', '/api/inventory/status', '/api/inventory/alerts',
+                     '/api/inventory/replenishment', '/api/inventory/turnover',
+                     f"/api/inventory/forecast/{s['product_id']}", '/api/customer-analytics/overview',
+                     '/api/customer-analytics/segments', '/api/evaluation/milestone2'):
+            response = client.get(path, headers=headers)
+            assert response.status_code == 200, (path, response.text)
+    assert client.get('/api/inventory/alerts', headers=s['admin']).json() == []
+    assert client.get('/api/recommendations/metrics', headers=s['admin']).status_code == 200
+    assert client.get('/api/recommendations/me', headers=s['customer']).status_code == 200

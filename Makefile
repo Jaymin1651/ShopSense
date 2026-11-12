@@ -1,4 +1,4 @@
-.PHONY: up down test seed seed-m2 migrate data evaluate
+.PHONY: up down test seed seed-m2 migrate data evaluate scheduler workflows mlflow-ui evaluate-m3
 up:
 	docker compose up --build -d
 
@@ -22,3 +22,15 @@ data:
 
 evaluate:
 	python -m scripts.evaluate_milestone2
+
+scheduler:
+	python -m app.scheduler
+
+workflows:
+	python -m app.scheduler --run all
+
+mlflow-ui:
+	mlflow ui --backend-store-uri sqlite:///mlflow.db --port 5000
+
+evaluate-m3:
+	python -m scripts.evaluate_milestone3

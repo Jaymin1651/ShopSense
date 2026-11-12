@@ -48,16 +48,20 @@ The course brief defines Milestone 2 as the Product & Inventory Analytics Engine
 
 **Exit:** every synthetic order has traceable stock movements and accounting invariants.
 
-## Milestone 3: Weeks 5–6 — real analytics & ML
+## Milestone 3: Weeks 5–6 — advanced analytics, APIs & reporting (done)
 
-- Implement ETL pipeline for a clean synthetic/consented sample dataset with explicit data dictionary, schema checks and deduplication.
-- (Weekly version done in Milestone 2.) Extend to daily forecasts per product using daily features (lags, rolling averages, weekday, month, holidays) with chronological train/validation splits; include at least naive moving average, seasonal naive and trained model.
-- Track MAE, RMSE, MAPE/sMAPE (with zero-demand safeguards), bias and retraining timestamps; store experiment metadata in **MLflow**.
-- (Done in Milestone 2.) Customer RFM clustering using scikit-learn with privacy-safe identifiers; validate silhouette and stability as appropriate.
-- (Done in Milestone 2.) Personalized recommendations blending content and collaborative interactions; offline metrics such as Precision@K and Recall@K.
-- Add churn definition, label windows, class imbalance handling and precision/recall for churn-risk classification.
+Delivered against the Milestone 3 implementation plan:
 
-**Exit:** reproducible dataset and model comparison artifacts showing whether ML beats a naive baseline.
+- FastAPI analytics services in `app/api/` (revenue, forecast, customer intelligence, recommendations, MLOps, workflows, reports).
+- Advanced revenue analysis and vendor benchmarking (`app/analytics/revenue_analysis.py`).
+- Churn-risk classification with a time-based label window and class balancing (`app/customer_intelligence/churn.py`).
+- MLflow tracking and model registry with champion/challenger promotion; the API serves the production forecast.
+- APScheduler workflows with run history, retries and success-rate reporting.
+- Admin, vendor and customer BI dashboards with live KPIs, plus Excel and PDF exports.
+
+**Evaluation** (`reports/MILESTONE3_EVALUATION.md`): API p95 169 ms (target 300 ms), dashboard consistency 100% (target 99%), workflow success 36/36 (target 100%).
+
+**Still open from the earlier plan:** daily (instead of weekly) per-product forecasts with holiday features; an ETL pipeline from real source systems.
 
 ## Milestone 4: Weeks 7–8 — productization and deployment
 

@@ -5,7 +5,7 @@ import plotly.express as px
 import streamlit as st
 
 from session import resolve_user
-from ui import TEAL, VIOLET, api, apply_style, currency, nav, note
+from ui import TEAL, VIOLET, api, apply_style, currency, currency_short, nav, note
 
 st.set_page_config(page_title='ShopSense • Marketplace Intelligence', page_icon='🛍️', layout='wide')
 apply_style()
@@ -79,8 +79,9 @@ if role in ('admin', 'vendor'):
     if summary:
         cols = st.columns(4)
         for col, label, value in zip(cols, ['Gross merchandise value', 'Orders', 'Average order value', 'Low-stock products'],
-                                     [currency(summary['gmv']), summary['orders'], currency(summary['average_order_value']), summary['low_stock_products']]):
-            col.metric(label, value)
+                                     [currency_short(summary['gmv']), f"{summary['orders']:,}",
+                                      currency(summary['average_order_value']), summary['low_stock_products']]):
+            col.metric(label, value, help=f"Exact: {currency(summary['gmv'])}" if label.startswith('Gross') else None)
         st.caption('GMV is calculated from placed order items. It is not collected payment, profit, or net revenue.')
     alerts = api('GET', '/api/inventory/alerts') or []
     critical = [a for a in alerts if a['severity'] == 'critical']

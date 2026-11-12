@@ -10,3 +10,7 @@ reportlab>=4.2,<5
 pandas>=2.2,<3
 numpy>=1.26,<3
 scikit-learn>=1.5,<2
+# Milestone 3: model registry, scheduled workflows, Excel export
+mlflow>=3.1,<4
+APScheduler>=3.10,<4
+openpyxl>=3.1,<4

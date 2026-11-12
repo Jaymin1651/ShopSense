@@ -66,10 +66,15 @@ pytest -q
 | Customer analytics (M2) | Spend, AOV, repeat rate, top customers, view→cart→buy funnel, K-Means RFM segments with silhouette and stability |
 | Recommendations (M2) | Hybrid item-based collaborative filtering with reasons, impression/click tracking, CTR, offline HitRate/Precision/Recall |
 | Demand (M1) | 7-day moving-average baseline (`/api/analytics/forecast`, kept for compatibility) |
-| Reporting | Protected vendor-scoped CSV transactions and PDF overview |
+| Revenue analytics (M3) | GMV, growth (30-day, month on month), category mix, Pareto concentration, acquisition cohorts, vendor benchmarking with ranks and percentiles |
+| Customer intelligence (M3) | Churn-risk model (logistic regression, time-based test), 12-month customer value, segment-level product picks |
+| MLOps (M3) | MLflow tracking and model registry with champion/challenger promotion; API serves the production forecast model |
+| Automated workflows (M3) | APScheduler jobs with run history and retries: retraining, analytics refresh, data-quality checks, daily reports |
+| BI dashboards (M3) | Admin, vendor and customer dashboards with live KPIs (5 s refresh), models & workflows page, results page |
+| Reporting | Vendor-scoped CSV and PDF overview (M1); Excel and PDF business reports with charts (M3) |
 | Delivery | PostgreSQL + Alembic, Docker Compose, GitHub Actions tests/build, optional Render hooks |
 
-**Not yet included:** payment gateway, returns/refunds, real supplier/warehouse feeds, privacy consent workflows, production rate-limiting, churn prediction, full ETL/scheduling, MLflow integration. These are later milestones; don't describe them as completed.
+**Not yet included:** payment gateway, returns/refunds, real supplier/warehouse feeds, privacy consent workflows, production rate-limiting, external ETL from source systems. These are later milestones; don't describe them as completed.
 
 ## Milestone 2: inventory intelligence and customer analytics
 
@@ -91,7 +96,31 @@ With Docker: `make seed-m2` after `make up`. Demo logins printed by the seeder: 
 
 Product-level forecasts reach about 69%, the same as a 4-week average, because single products sell a few units a week. On real Olist data, category forecasts reach 75.5% and the model loses to a naive forecast for the store total. See [the Milestone 2 guide](docs/MILESTONE2_GUIDE.md) for methods, formulas and limitations.
 
+## Milestone 3: advanced analytics, APIs and reporting
+
+```bash
+pip install -r requirements-dev.txt -r requirements-dashboard.txt
+alembic upgrade head                        # adds workflow_runs and analytics_snapshots
+python -m scripts.seed_milestone2           # demo data, if not loaded yet
+python -m app.scheduler --run all           # train + register models, refresh analytics, write reports
+python -m app.scheduler                     # keep running workflows on their schedule
+mlflow ui --backend-store-uri sqlite:///mlflow.db   # model registry at http://localhost:5000
+python -m scripts.evaluate_milestone3       # with the API running: load, consistency and workflow tests
+```
+
+With Docker, `docker compose up --build` also starts the `scheduler` and `mlflow` services.
+
+| Target (plan) | Measured | Met | How |
+| --- | --- | --- | --- |
+| API p95 ≤ 300 ms under load | 169 ms | Yes | 25 users + 1 order/s for 60 s, 1,201 requests, 0 errors; 19 of 19 endpoints under 300 ms |
+| Dashboard consistency ≥ 99% | 100% | Yes | 193 of 193 live reads equal a direct database count while orders arrive |
+| Workflow success 100% | 100% | Yes | 36 of 36 scheduled runs across 6 jobs |
+
+Measured on one shared CPU core with SQLite and 17,800 synthetic orders. Load sweep p95: 10 users 88 ms, 25 users 169 ms, 50 users 244 ms. Heavier analytics panels refresh in the background at most every 30 s and show how many orders behind they are; live KPIs are always exact. See [the Milestone 3 guide](docs/MILESTONE3_GUIDE.md) and [the evaluation report](reports/MILESTONE3_EVALUATION.md).
+
 ## Project documentation and mentor guide
+
+- **[Milestone 3 Guide](docs/MILESTONE3_GUIDE.md)** — API services, revenue analysis, MLflow registry, workflows, BI dashboards, evaluation method and viva notes.
 
 - **[Milestone 2 Guide](docs/MILESTONE2_GUIDE.md)** — inventory forecasting, alerts, replenishment, segmentation and recommendation design, evaluation protocol and viva notes.
 
@@ -111,10 +140,19 @@ ShopSense/
 │   ├── recommendation/  recommendation.py                                               (M2)
 │   ├── routers/  auth vendors products orders behavior analytics
 │   │             inventory catalog customer_analytics recommendations                   (M2)
-│   └── services/ analytics.py intelligence.py
+│   ├── api/                    revenue, forecast, customer, recommendation, ops routes  (M3)
+│   ├── analytics/              revenue_analysis.py snapshots.py refresher.py           (M3)
+│   ├── forecasting/            service.py (serves the MLflow production model)         (M3)
+│   ├── customer_intelligence/  churn.py (churn risk + 12-month value)                  (M3)
+│   ├── recommendations/        segment_recommendations.py                              (M3)
+│   ├── mlflow_tracking/        tracking.py models.py                                   (M3)
+│   ├── scheduler/              jobs.py runner.py __main__.py (APScheduler)             (M3)
+│   ├── reports/                excel_reports.py pdf_reports.py data.py                (M3)
+│   └── services/ analytics.py intelligence.py bi.py
 ├── data/      synthetic Milestone 2 CSVs (generate_milestone2_data.py, seed 42)
-├── reports/   MILESTONE2_EVALUATION.md, milestone2_evaluation.json
-├── dashboard/ dashboard.py ui.py pages/ (Historical, Inventory, Customers, Recommendations, Milestone 2)
+├── reports/   MILESTONE2/3_EVALUATION.md + .json; generated/ (scheduled Excel/PDF, not committed)
+├── dashboard/ dashboard.py ui.py pages/ (Historical, Inventory, Customers, Recommendations, Milestone 2,
+│              Admin/Vendor/Customer dashboards, Models & workflows, Milestone 3)
 ├── scripts/bootstrap_admin.py, seed_demo.py
 ├── alembic/versions/0001_initial.py
 ├── tests/  conftest.py test_api.py
@@ -175,6 +213,17 @@ Open `http://localhost:8000/docs` for request and response schemas.
 | POST | `/api/recommendations/feedback` | Customer |
 | GET | `/api/recommendations/metrics` | Admin |
 | GET | `/api/evaluation/milestone2` | Vendor/admin |
+| GET | `/api/live/kpis`, `/api/live/version` | Vendor (own) / admin |
+| GET | `/api/revenue/overview`, `/cohorts`, `/benchmark` | Vendor (own, anonymous peers) / admin |
+| GET | `/api/analytics/revenue`, `/vendor-performance`, `/customers` | Vendor (own) / admin |
+| GET | `/api/customer-intelligence/overview`, `/at-risk` | Vendor (own) / admin |
+| GET | `/api/recommendations/segments` | Vendor (own) / admin |
+| GET | `/api/recommend/{customer_id}` | Admin |
+| GET | `/api/forecast/summary`, `/api/forecast/{product_id}` | Vendor (own) / admin |
+| GET | `/api/forecast/model`, `/api/mlops/models`, `/api/mlops/runs` | Admin |
+| GET / POST | `/api/workflows`, `/api/workflows/runs`, `/api/workflows/{job}/run` | Admin |
+| GET | `/api/reports/business.xlsx`, `/api/reports/business.pdf` | Vendor (own) / admin |
+| GET | `/api/evaluation/milestone3` | Vendor / admin |
 | GET | `/health`, `/ready` | Public |
 
 ## Deploy to GitHub and hosting

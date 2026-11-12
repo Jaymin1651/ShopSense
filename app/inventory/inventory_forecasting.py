@@ -118,6 +118,7 @@ class DemandForecaster:
                                            random_state=self.random_state, n_jobs=-1)
         self.model.fit(X, y)
         resid = y - self.model.predict(X)
+        self.model.set_params(n_jobs=1)  # serving predicts a few rows at a time; threads only add overhead
         # In-sample residuals understate error; widen them for an honest interval.
         self.residual_q = (float(np.quantile(resid, 0.1)) * 1.8, float(np.quantile(resid, 0.9)) * 1.8)
         return self
@@ -148,6 +149,35 @@ class DemandForecaster:
                          'upper': round(value + self.residual_q[1] * level * widen, 2)})
             hist = pd.concat([hist, pd.Series([value], index=[week])])
         return pd.DataFrame(rows)
+
+
+    def forecast_many(self, weekly: pd.DataFrame, horizon: int = 12, min_weeks: int = MIN_TRAIN_WEEKS) -> dict:
+        """Recursive forecasts for every series at once: one model call per step.
+
+        Returns ``{series: [{'week', 'forecast', 'lower', 'upper'}, ...]}``.
+        """
+        hist = {name: grp.set_index('week')['units'].sort_index().astype(float)
+                for name, grp in weekly.groupby('series')}
+        hist = {k: v for k, v in hist.items() if len(v) >= min_weeks}
+        out = {name: [] for name in hist}
+        for step in range(1, horizon + 1):
+            names, rows = [], []
+            for name, h in hist.items():
+                week = h.index[-1] + pd.to_timedelta(7, unit='D')
+                ext = pd.concat([h, pd.Series([np.nan], index=[week])])
+                rows.append(feature_frame(ext, self._floor(name, h)).iloc[[-1]])
+                names.append(name)
+            if not rows:
+                break
+            feats = pd.concat(rows)
+            preds = self.predict_frame(feats)
+            widen = np.sqrt(step)
+            for name, value, level, week in zip(names, preds, feats['level'].to_numpy(), feats.index):
+                out[name].append({'week': week.date().isoformat(), 'forecast': round(float(value), 2),
+                                  'lower': round(max(0.0, value + self.residual_q[0] * level * widen), 2),
+                                  'upper': round(float(value + self.residual_q[1] * level * widen), 2)})
+                hist[name] = pd.concat([hist[name], pd.Series([float(value)], index=[week])])
+        return out
 
 
 def baseline_frame(series: pd.Series) -> pd.DataFrame:

@@ -174,3 +174,11 @@ def test_dataset_generator_is_deterministic():
         pd.testing.assert_frame_equal(a[name], b[name])
     assert set(a['transactions'].columns) >= {'transaction_id', 'customer_id', 'product_id', 'amount', 'date'}
     assert (a['inventory']['reorder_level'] >= 5).all()
+
+
+def test_no_alerts_when_everything_is_in_stock():
+    """Regression: an empty alert list used to raise inside DataFrame.apply."""
+    inv = pd.DataFrame({'product_id': [1, 2], 'current_stock': [50, 40], 'reorder_level': [5, 5]})
+    alerts = low_stock_alert(inv)
+    assert alerts.empty and 'message' in alerts
+    assert replenishment(inv).empty

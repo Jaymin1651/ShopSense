@@ -21,6 +21,10 @@ VIOLET = '#5B4BC4'    # forecast values only
 STATUS_COLORS = {'Available': TEAL, 'Low stock': AMBER, 'Out of stock': RED,
                  'warning': AMBER, 'critical': RED}
 SEGMENT_COLORS = [TEAL, '#3B7EA1', '#8A94A6', AMBER, '#7A5C9E', RED]
+# Fixed colour per segment name, ordered from most to least valuable.
+SEGMENT_COLOR = {'Champions': TEAL, 'High value': TEAL, 'Loyal': '#3B7EA1', 'Regular': '#3B7EA1',
+                 'Promising': '#7A5C9E', 'Occasional': '#7A5C9E', 'Needs attention': AMBER, 'At risk': RED,
+                 'Low engagement': '#8A94A6', 'Dormant': '#8A94A6'}
 FONT = '"IBM Plex Sans", "Source Sans 3", "Source Sans Pro", -apple-system, "Segoe UI", Roboto, sans-serif'
 
 CSS = f'''<style>
@@ -69,36 +73,71 @@ def pill(label: str, color: str) -> str:
     return f'<span class="ss-pill" style="background:{color}">{label}</span>'
 
 
-def api(method, path, quiet=False, **kwargs):
-    """Call the ShopSense API with the signed-in token; show errors inline."""
-    token = st.session_state.get('token')
+@st.cache_data(ttl=30, show_spinner=False)
+def _cached_get(url: str, token: str | None, params_key: tuple):
+    """Short-lived cache for GET requests so widget changes rerun the page quickly."""
+    return _request('GET', url, token, params=dict(params_key) or None)
+
+
+def _request(method, url, token, **kwargs):
     headers = {'Authorization': f'Bearer {token}'} if token else {}
     try:
-        r = requests.request(method, f'{API_URL}{path}', headers=headers, timeout=60, **kwargs)
-        if r.status_code >= 400:
-            try:
-                detail = r.json().get('detail', r.text)
-                if isinstance(detail, list):
-                    detail = '; '.join(str(d.get('msg', d)) for d in detail)
-            except ValueError:
-                detail = r.text
-            if not quiet:
-                st.error(f'{r.status_code}: {detail}')
-            return None
-        content_type = r.headers.get('content-type', '')
-        if content_type.startswith('text/csv'):
-            return r.text
-        if content_type.startswith('application/pdf'):
-            return r.content
-        return r.json()
+        r = requests.request(method, url, headers=headers, timeout=60, **kwargs)
     except requests.RequestException as exc:
-        if not quiet:
-            st.error(f'The API at {API_URL} is not reachable ({exc}). Start it with `uvicorn app.main:app`.')
-        return None
+        return 'down', str(exc)
+    if r.status_code >= 400:
+        try:
+            detail = r.json().get('detail', r.text)
+            if isinstance(detail, list):
+                detail = '; '.join(str(d.get('msg', d)) for d in detail)
+        except ValueError:
+            detail = r.text
+        return 'error', f'{r.status_code}: {detail}'
+    content_type = r.headers.get('content-type', '')
+    if content_type.startswith('text/csv'):
+        return 'ok', r.text
+    if content_type.startswith(('application/pdf', 'application/vnd.openxmlformats')):
+        return 'ok', r.content
+    return 'ok', r.json()
+
+
+def api(method, path, quiet=False, **kwargs):
+    """Call the ShopSense API with the signed-in token; show errors inline.
+
+    GET answers are cached for 30 seconds per user; any write clears the cache
+    so the page shows the change straight away.
+    """
+    token = st.session_state.get('token')
+    url = f'{API_URL}{path}'
+    if method == 'GET' and set(kwargs) <= {'params'}:
+        params = kwargs.get('params') or {}
+        status, payload = _cached_get(url, token, tuple(sorted(params.items())))
+    else:
+        status, payload = _request(method, url, token, **kwargs)
+        if status == 'ok':
+            _cached_get.clear()
+    if status == 'ok':
+        return payload
+    if not quiet:
+        if status == 'down':
+            st.error(f'The API at {API_URL} is not reachable ({payload}). Start it with `uvicorn app.main:app`.')
+        else:
+            st.error(payload)
+    return None
 
 
 def currency(value):
     return f'${float(value):,.2f}'  # Demo currency only; no conversion.
+
+
+def currency_short(value):
+    """Compact money for headline numbers so large totals fit their column."""
+    v = float(value)
+    if abs(v) >= 1_000_000:
+        return f'${v / 1_000_000:,.2f}M'
+    if abs(v) >= 10_000:
+        return f'${v / 1_000:,.0f}k'
+    return currency(v)
 
 
 def require_user(*roles):
@@ -118,14 +157,37 @@ def require_user(*roles):
 
 def nav(user):
     """One sidebar menu for every page, labelled for people rather than file names."""
+    role = user['role'] if user else None
     with st.sidebar:
         st.markdown('### ShopSense')
-        st.page_link('dashboard.py', label='Overview' if not user or user['role'] != 'customer' else 'Shop')
-        if user and user['role'] in ('admin', 'vendor'):
+        st.page_link('dashboard.py', label='Shop' if role == 'customer' else 'Overview')
+        if role == 'admin':
+            st.page_link('pages/6_Admin_Dashboard.py', label='BI dashboard')
+        elif role == 'vendor':
+            st.page_link('pages/7_Vendor_Dashboard.py', label='My business')
+        elif role == 'customer':
+            st.page_link('pages/8_Customer_Dashboard.py', label='My account')
+            st.page_link('pages/4_Recommendations.py', label='Picked for you')
+        if role in ('admin', 'vendor'):
             st.page_link('pages/2_Inventory_Intelligence.py', label='Inventory')
             st.page_link('pages/3_Customer_Analytics.py', label='Customers')
             st.page_link('pages/4_Recommendations.py', label='Recommendations')
+        if role == 'admin':
+            st.page_link('pages/9_Models_and_Workflows.py', label='Models & workflows')
+        if role in ('admin', 'vendor'):
+            st.caption('Results')
             st.page_link('pages/5_Milestone_2_Scorecard.py', label='Milestone 2 results')
-        elif user:
-            st.page_link('pages/4_Recommendations.py', label='Picked for you')
+            st.page_link('pages/10_Milestone_3_Results.py', label='Milestone 3 results')
         st.page_link('pages/1_Historical_Analytics.py', label='Historical data (Olist)')
+
+
+def api_live(path, params=None):
+    """Uncached GET for real-time panels. Returns None quietly on errors."""
+    status, payload = _request('GET', f'{API_URL}{path}', st.session_state.get('token'), params=params)
+    return payload if status == 'ok' else None
+
+
+def download(path) -> bytes | None:
+    """Fetch a file (Excel/PDF) for a download button."""
+    status, payload = _request('GET', f'{API_URL}{path}', st.session_state.get('token'))
+    return payload if status == 'ok' and isinstance(payload, (bytes, bytearray)) else None
