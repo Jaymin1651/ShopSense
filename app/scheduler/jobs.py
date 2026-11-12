@@ -228,5 +228,5 @@ def describe(job: Job) -> str:
     s = job.schedule
     if job.trigger == 'interval':
         unit, value = next(iter(s.items()))
-        return f'every {value} {unit if value != 1 else unit.rstrip("s")}'
+        return f'every {unit.rstrip("s")}' if value == 1 else f'every {value} {unit}'
     return f"daily at {s.get('hour', 0):02d}:{s.get('minute', 0):02d} UTC"

@@ -36,9 +36,12 @@ def test_revenue_series_growth_and_aov():
     sales = pd.DataFrame({'order_id': [1, 2, 3, 4], 'customer_id': [1, 1, 2, 3], 'product_id': [1, 1, 2, 2],
                           'date': ['2026-01-05', '2026-01-20', '2026-02-03', '2026-02-10'], 'quantity': [1, 1, 1, 1],
                           'amount': [100.0, 100.0, 150.0, 150.0], 'category': ['A', 'A', 'B', 'B']})
-    months = ra.revenue_series(sales, 'month')
+    months = ra.revenue_series(sales, 'month', as_of=pd.Timestamp('2026-03-01'))
     assert [m['period'] for m in months] == ['2026-01', '2026-02']
     assert months[1]['gmv'] == 300.0 and months[1]['growth_pct'] == 50.0 and months[1]['aov'] == 150.0
+    assert not any(m['partial'] for m in months)
+    mid_month = ra.revenue_series(sales, 'month', as_of=pd.Timestamp('2026-02-15'))
+    assert mid_month[1]['partial'] and mid_month[1]['growth_pct'] is None  # half a month is not a drop
     assert ra.pareto(sales, 'product_id')['top_20_pct_share'] == 60.0
 
 

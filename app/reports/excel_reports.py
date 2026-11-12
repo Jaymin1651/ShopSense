@@ -63,13 +63,15 @@ def build_workbook(data: dict) -> bytes:
     ws = wb.create_sheet('Monthly revenue')
     monthly = data['revenue']['monthly']
     end = _table(ws, 1, ['Month', 'GMV', 'Orders', 'AOV', 'Growth %'],
-                 [[m['period'], m['gmv'], m['orders'], m['aov'], m['growth_pct']] for m in monthly],
+                 [[m['period'] + (' (to date)' if m.get('partial') else ''), m['gmv'], m['orders'], m['aov'],
+                   m['growth_pct']] for m in monthly],
                  {2: MONEY, 3: INT, 4: MONEY, 5: PCT})
     if monthly:
         chart = LineChart()
         chart.title, chart.y_axis.title, chart.height, chart.width = 'GMV by month', 'GMV', 8, 18
-        chart.add_data(Reference(ws, min_col=2, min_row=1, max_row=end), titles_from_data=True)
-        chart.set_categories(Reference(ws, min_col=1, min_row=2, max_row=end))
+        last = end - 1 if monthly[-1].get('partial') and len(monthly) > 1 else end  # chart complete months only
+        chart.add_data(Reference(ws, min_col=2, min_row=1, max_row=last), titles_from_data=True)
+        chart.set_categories(Reference(ws, min_col=1, min_row=2, max_row=last))
         chart.series[0].graphicalProperties.line.solidFill = TEAL
         ws.add_chart(chart, 'G2')
     ws.freeze_panes = 'A2'

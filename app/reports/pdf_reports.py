@@ -74,7 +74,7 @@ def _revenue_chart(monthly):
     chart = VerticalBarChart()
     chart.x, chart.y, chart.width, chart.height = 14 * mm, 10 * mm, 158 * mm, 46 * mm
     chart.data = [[m['gmv'] for m in months]]
-    chart.categoryAxis.categoryNames = [m['period'][2:] for m in months]
+    chart.categoryAxis.categoryNames = [m['period'][2:] + ('*' if m.get('partial') else '') for m in months]
     chart.categoryAxis.labels.fontSize = 7
     chart.categoryAxis.labels.fillColor = MUTED
     chart.valueAxis.labels.fontSize = 7
@@ -85,9 +85,15 @@ def _revenue_chart(monthly):
     chart.valueAxis.visibleGrid = True
     chart.bars[0].fillColor = TEAL
     chart.bars[0].strokeColor = None
+    for i, m in enumerate(months):
+        if m.get('partial'):
+            chart.bars[(0, i)].fillColor = colors.HexColor('#9FCFCE')
     chart.barSpacing = 2
     d.add(chart)
     d.add(String(14 * mm, 58 * mm, 'GMV by month', fontName='Helvetica-Bold', fontSize=8.5, fillColor=INK))
+    if any(m.get('partial') for m in months):
+        d.add(String(172 * mm, 58 * mm, '* month to date', fontName='Helvetica', fontSize=7.5, fillColor=MUTED,
+                     textAnchor='end'))
     return d
 
 

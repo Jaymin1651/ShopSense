@@ -77,7 +77,9 @@ with left:
     st.subheader('Your monthly revenue')
     monthly = pd.DataFrame(rev.get('monthly', []))
     if not monthly.empty:
-        fig = go.Figure(go.Bar(x=monthly['period'], y=monthly['gmv'], marker_color=TEAL,
+        partial = monthly.get('partial', pd.Series(False, index=monthly.index)).fillna(False)
+        fig = go.Figure(go.Bar(x=monthly['period'], y=monthly['gmv'],
+                               marker_color=['#9FCFCE' if p else TEAL for p in partial],
                                customdata=monthly['growth_pct'], hovertemplate='%{y:$,.0f}<br>%{customdata}%<extra></extra>'))
         fig.update_layout(height=300, yaxis_title='GMV')
         st.plotly_chart(fig, width='stretch', config={'displayModeBar': False})

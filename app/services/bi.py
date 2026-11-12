@@ -34,9 +34,9 @@ def compute_revenue_overview(db: Session, vendor_id: int | None) -> dict:
     now = intel._now()
     return {
         'growth': ra.growth_summary(sales, as_of=now),
-        'monthly': ra.revenue_series(sales, 'month', 18),
-        'weekly': ra.revenue_series(sales, 'week', 26),
-        'daily': ra.revenue_series(sales, 'day', 60),
+        'monthly': ra.revenue_series(sales, 'month', 18, as_of=now),
+        'weekly': ra.revenue_series(sales, 'week', 26, as_of=now),
+        'daily': ra.revenue_series(sales, 'day', 60, as_of=now),
         'categories': ra.category_mix(sales, _parents(db), 90, as_of=now),
         'pareto_products': {k: v for k, v in ra.pareto(sales, 'product_id').items()},
     }

@@ -112,12 +112,16 @@ t_rev, t_ven, t_cus, t_exp = st.tabs(['Revenue', 'Vendor benchmarking', 'Custome
 with t_rev:
     monthly = pd.DataFrame(rev['monthly'])
     fig = go.Figure()
-    fig.add_bar(x=monthly['period'], y=monthly['gmv'], name='GMV', marker_color=TEAL)
+    partial = monthly.get('partial', pd.Series(False, index=monthly.index)).fillna(False)
+    fig.add_bar(x=monthly['period'], y=monthly['gmv'], name='GMV',
+                marker_color=['#9FCFCE' if p else TEAL for p in partial])
     fig.add_scatter(x=monthly['period'], y=monthly['growth_pct'], name='Growth %', yaxis='y2',
                     line=dict(color=INK, width=2), mode='lines+markers')
     fig.update_layout(height=340, yaxis=dict(title='GMV'),
                       yaxis2=dict(title='Growth %', overlaying='y', side='right', showgrid=False, ticksuffix='%'))
     st.plotly_chart(fig, width='stretch', config={'displayModeBar': False})
+    if partial.any():
+        note('The lighter bar is the current month so far; it gets a growth figure when the month ends.')
     c1, c2 = st.columns(2)
     with c1:
         st.markdown('**Category mix, last 90 days**')

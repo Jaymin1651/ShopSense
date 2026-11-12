@@ -67,11 +67,18 @@ def _prep(sales: pd.DataFrame) -> pd.DataFrame:
     return frame
 
 
-def revenue_series(sales: pd.DataFrame, granularity: str = 'month', periods: int = 12) -> list[dict]:
-    """GMV, orders, units and AOV per period with period-over-period growth."""
+def revenue_series(sales: pd.DataFrame, granularity: str = 'month', periods: int = 12,
+                   as_of: pd.Timestamp | None = None) -> list[dict]:
+    """GMV, orders, units and AOV per period with period-over-period growth.
+
+    A period that has not finished yet (the current week or month) is kept but
+    marked ``partial`` and gets no growth figure, so a half month is never
+    read as a drop.
+    """
     if sales.empty:
         return []
     frame = _prep(sales)
+    end = pd.Timestamp(as_of).normalize() if as_of is not None else frame['date'].max()
     grouped = (frame.set_index('date').groupby(pd.Grouper(freq=FREQ[granularity]))
                .agg(gmv=('amount', 'sum'), orders=('order_id', 'nunique'), units=('quantity', 'sum'),
                     customers=('customer_id', 'nunique')))
@@ -79,9 +86,14 @@ def revenue_series(sales: pd.DataFrame, granularity: str = 'month', periods: int
     grouped['growth_pct'] = (grouped['gmv'].pct_change() * 100).replace([np.inf, -np.inf], np.nan).round(1)
     if granularity == 'day':
         grouped['gmv_7d_avg'] = grouped['gmv'].rolling(7, min_periods=1).mean().round(2)
+        grouped['partial'] = False
+    else:
+        grouped['partial'] = grouped.index > end  # label is the period's last day
+        grouped.loc[grouped['partial'], 'growth_pct'] = np.nan
     grouped = grouped.tail(periods).reset_index()
     grouped['period'] = grouped['date'].dt.strftime('%Y-%m-%d' if granularity != 'month' else '%Y-%m')
     grouped['gmv'] = grouped['gmv'].round(2)
+    grouped['partial'] = grouped['partial'].astype(bool)
     return _records(grouped.drop(columns='date'))
 
 
